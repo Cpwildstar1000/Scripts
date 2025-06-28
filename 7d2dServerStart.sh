@@ -1,0 +1,1 @@
+/home/steam/Steam/steamapps/common/7d2d/startserver.sh -configfile=serverconfig.xml
