@@ -1,0 +1,1 @@
+/home/steam/Steam/common/ArkServer/ShooterGame/Binaries/Linux/startserver.sh
