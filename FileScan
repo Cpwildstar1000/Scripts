@@ -1,0 +1,74 @@
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+
+# Create a form
+$form = New-Object System.Windows.Forms.Form
+$form.Text = 'File Access Details'
+$form.Size = New-Object System.Drawing.Size(800, 600)
+$form.StartPosition = 'CenterScreen'
+
+# Add a label
+$label = New-Object System.Windows.Forms.Label
+$label.Text = 'Please select the drive to scan:'
+$label.Location = New-Object System.Drawing.Point(10, 10)
+$label.Size = New-Object System.Drawing.Size(280, 20)
+$form.Controls.Add($label)
+
+# Add a combo box for drive selection
+$comboBox = New-Object System.Windows.Forms.ComboBox
+$comboBox.Location = New-Object System.Drawing.Point(10, 40)
+$comboBox.Size = New-Object System.Drawing.Size(280, 20)
+
+# Populate the combo box with available drives
+Get-PSDrive -PSProvider 'FileSystem' | ForEach-Object {
+    $comboBox.Items.Add($_.Root)
+}
+$form.Controls.Add($comboBox)
+
+# Add a button to start scanning
+$scanButton = New-Object System.Windows.Forms.Button
+$scanButton.Location = New-Object System.Drawing.Point(300, 38)
+$scanButton.Size = New-Object System.Drawing.Size(100, 23)
+$scanButton.Text = 'Scan'
+$form.Controls.Add($scanButton)
+
+# List view to display the results
+$listView = New-Object System.Windows.Forms.ListView
+$listView.Location = New-Object System.Drawing.Point(10, 70)
+$listView.Size = New-Object System.Drawing.Size(770, 500)
+$listView.View = [System.Windows.Forms.View]::Details
+$listView.Columns.Add('Path', 200) | Out-Null
+$listView.Columns.Add('Owner', 100) | Out-Null
+$listView.Columns.Add('User', 100) | Out-Null
+$listView.Columns.Add('Access Type', 100) | Out-Null
+$listView.Columns.Add('Permissions', 150) | Out-Null
+$listView.Columns.Add('Inheritance', 100) | Out-Null
+$form.Controls.Add($listView)
+
+# Function to scan and display access details
+$scanButton.Add_Click({
+    $listView.Items.Clear()
+    $rootPath = $comboBox.SelectedItem
+
+    if (-not $rootPath) {
+        [System.Windows.Forms.MessageBox]::Show("No drive selected. Please select a drive and try again.")
+        return
+    }
+
+    $items = Get-ChildItem -Path $rootPath -Recurse -Force -ErrorAction SilentlyContinue
+    foreach ($item in $items) {
+        $acl = Get-Acl -Path $item.FullName -ErrorAction SilentlyContinue
+        foreach ($access in $acl.Access) {
+            $listViewItem = New-Object System.Windows.Forms.ListViewItem($item.FullName)
+            $listViewItem.SubItems.Add($acl.Owner) | Out-Null
+            $listViewItem.SubItems.Add($access.IdentityReference.ToString()) | Out-Null
+            $listViewItem.SubItems.Add($access.AccessControlType) | Out-Null
+            $listViewItem.SubItems.Add($access.FileSystemRights) | Out-Null
+            $listViewItem.SubItems.Add($access.IsInherited) | Out-Null
+            $listView.Items.Add($listViewItem)
+        }
+    }
+})
+
+# Show the form
+$form.ShowDialog()

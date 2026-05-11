@@ -1,0 +1,1 @@
+$lines = @(); Get-Content C:\temp\FileWithDupes.txt | %{ if (($lines -eq $_).length -eq 0) {$lines = $lines + $_}}; $lines > C:\temp\FileWithoutDupes.txt

@@ -1,0 +1,16 @@
+Connect-VIServer aims-vcntr-02.aims.wisc.edu
+Restart-VM aims-umcn-01
+Start-Sleep 10
+Restart-VM aims-umcp-01
+Start-Sleep 10
+Restart-VM aims-d-ucpt-01
+Start-Sleep 10
+Restart-VM aims-d-ucpt-02
+Start-Sleep 10
+Restart-VM aims-d-ucpt-03
+Start-Sleep 10
+Restart-VM aims-m-ucpt-01
+Start-Sleep 10
+Restart-VM aims-m-ucpt-02
+Start-Sleep 10
+Restart-VM aims-m-ucpt-03

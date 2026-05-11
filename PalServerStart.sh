@@ -1,0 +1,1 @@
+/home/steam/Steam/steamapps/common/PalServer/PalServer.sh -publiclobby
