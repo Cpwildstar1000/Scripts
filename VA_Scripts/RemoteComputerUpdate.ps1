@@ -1,7 +1,9 @@
-# Get computer name
+# Get computer name and IP address
 $ComputerName = Read-Host "Enter the computer name to update"
 $FullComputerName = (Resolve-DnsName $ComputerName).Name
-if ($ComputerName -eq $FullComputerName) {
+$ComputerIP = (Resolve-DnsName $ComputerName).IPAddress
+$DNSComputerName = (Resolve-DnsName $ComputerIP).NameHost
+if ($DNSComputerName -eq $FullComputerName) {
     # Update remote computer
     try {
         Write-Host "Updating remote computer: $FullComputerName" -ForegroundColor Green
@@ -20,7 +22,7 @@ if ($ComputerName -eq $FullComputerName) {
         Write-Host "Update completed successfully on $FullComputerName" -ForegroundColor Green
     }
     catch {
-        Write-Host "An error occurred while updating $FullComputerName: $_" -ForegroundColor Red
+        Write-Host "An error occurred while updating $FullComputerName : $_" -ForegroundColor Red
     }   
 }
 else {
