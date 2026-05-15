@@ -88,8 +88,8 @@ if ($DNSComputerName -eq $FullComputerName) {
             $BIOSTest = (($PreUpdateBIOS) -split "0")[1]
             if ($BIOSTest -lt "2.24.") {"Please update BIOS on device" | Tee-Object $LogFile -Append | Write-Host}
             
-            "Intel(R) Wireless Bluetooth (R)" | Tee-Object $LogFile -Append | Write-Host
-            $PreUpdateBluetoothDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wireless Bluetooth (R)'"}
+            "Intel(R) Wireless Bluetooth(R)" | Tee-Object $LogFile -Append | Write-Host
+            $PreUpdateBluetoothDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wireless Bluetooth(R)'"}
             $PreUpdateBluetoothDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host
 
             "Intel(R) Management Engine WMI Provider" | Tee-Object $LogFile -Append | Write-Host
@@ -148,8 +148,8 @@ if ($DNSComputerName -eq $FullComputerName) {
             #$PostUpdateBIOS = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_BIOS | Select-Object SMBIOSBIOSVersion}
             #(($PostUpdateBIOS) -split "0")[1] | Tee-Object $LogFile -Append | Write-Host
             
-            "Intel(R) Wireless Bluetooth (R)" | Tee-Object $LogFile -Append | Write-Host
-            $PostUpdateBluetoothDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wireless Bluetooth (R)'"}
+            "Intel(R) Wireless Bluetooth(R)" | Tee-Object $LogFile -Append | Write-Host
+            $PostUpdateBluetoothDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wireless Bluetooth(R)'"}
             $PostUpdateBluetoothDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host
 
             "Intel(R) Management Engine WMI Provider" | Tee-Object $LogFile -Append | Write-Host
