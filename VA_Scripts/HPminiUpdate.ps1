@@ -3,10 +3,14 @@
 #################
 # Error logging
 
+#################
+# Things to Fix #
+#################
+# Fix Log File output
+
 
 # Set up Driver Files in array for later copy
 $DriverFiles = @(
-    'BIOS HP S22 Ver. 02.24.00 Rev.A, 12-8-2025 sp166136'
     'INTEL BLUETOOTH'
     'INTEL MGMT DRIVERS'
     'INTEL NIC DRIVER'
@@ -90,27 +94,27 @@ if ($DNSComputerName -eq $FullComputerName) {
             
             "Intel(R) Wireless Bluetooth(R)" | Tee-Object $LogFile -Append | Write-Host
             $PreUpdateBluetoothDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wireless Bluetooth(R)'"}
-            $PreUpdateBluetoothDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host
+            $PreUpdateBluetoothDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkYellow
 
             "Intel(R) Management Engine WMI Provider" | Tee-Object $LogFile -Append | Write-Host
             $PreUpdateMGMTDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Management Engine WMI Provider'"}
-            $PreUpdateMGMTDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host
+            $PreUpdateMGMTDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkYellow
             
             "Intel(R) Ethernet Connection (11) I219-LM" | Tee-Object $LogFile -Append | Write-Host
             $PreUpdateEthernetDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Ethernet Connection (11) I219-LM'"}
-            $PreUpdateEthernetDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host
+            $PreUpdateEthernetDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkYellow
 
             "Intel(R) Wi-Fi 6 AX201 160MHz" | Tee-Object $LogFile -Append | Write-Host
             $PreUpdateWiFiDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wi-Fi 6 AX201 160MHz'"}
-            $PreUpdateWiFiDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host
+            $PreUpdateWiFiDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkYellow
 
             "Intel(R) UHD Graphics 630" | Tee-Object $LogFile -Append | Write-Host
             $PreUpdateGraphicsDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) UHD Graphics 630'"}
-            $PreUpdateGraphicsDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host
+            $PreUpdateGraphicsDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkYellow
 
             "Realtek High Definition Audio" | Tee-Object $LogFile -Append | Write-Host
             $PreUpdateAudioDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Realtek High Definition Audio'"}
-            $PreUpdateAudioDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host
+            $PreUpdateAudioDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkYellow
 
 
             # Run installers on remote computer
@@ -133,7 +137,7 @@ if ($DNSComputerName -eq $FullComputerName) {
             "Ran Audio driver update" | Tee-Object $LogFile -Append | Write-Host
             Start-Sleep -Seconds 30
             Invoke-Command -ComputerName $FullComputerName -ScriptBlock {& 'C:\DriverInstallFiles\WIRELESS LAN DRIVERS.exe' /s}
-            "Ran LAN driver update" | Tee-Object $LogFile -Append | Write-Host
+            "Ran Wi-Fi driver update" | Tee-Object $LogFile -Append | Write-Host
             Start-Sleep -Seconds 30
 
             <#if ($PreUpdateBIOS -lt '2.24.') {
@@ -150,27 +154,27 @@ if ($DNSComputerName -eq $FullComputerName) {
             
             "Intel(R) Wireless Bluetooth(R)" | Tee-Object $LogFile -Append | Write-Host
             $PostUpdateBluetoothDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wireless Bluetooth(R)'"}
-            $PostUpdateBluetoothDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host
+            $PostUpdateBluetoothDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkYellow
 
             "Intel(R) Management Engine WMI Provider" | Tee-Object $LogFile -Append | Write-Host
             $PostUpdateMGMTDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Management Engine WMI Provider'"}
-            $PostUpdateMGMTDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host
+            $PostUpdateMGMTDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkYellow
             
             "Intel(R) Ethernet Connection (11) I219-LM" | Tee-Object $LogFile -Append | Write-Host
             $PostUpdateEthernetDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Ethernet Connection (11) I219-LM'"}
-            $PostUpdateEthernetDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host
+            $PostUpdateEthernetDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkYellow
 
             "Intel(R) Wi-Fi 6 AX201 160MHz" | Tee-Object $LogFile -Append | Write-Host
             $PostUpdateWiFiDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wi-Fi 6 AX201 160MHz'"}
-            $PostUpdateWiFiDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host
+            $PostUpdateWiFiDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkYellow
 
             "Intel(R) UHD Graphics 630" | Tee-Object $LogFile -Append | Write-Host
             $PostUpdateGraphicsDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) UHD Graphics 630'"}
-            $PostUpdateGraphicsDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host
+            $PostUpdateGraphicsDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkYellow
 
             "Realtek High Definition Audio" | Tee-Object $LogFile -Append | Write-Host
             $PostUpdateAudioDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Realtek High Definition Audio'"}
-            $PostUpdateAudioDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host
+            $PostUpdateAudioDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkYellow
 
             "Update completed successfully on $FullComputerName" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
         }
