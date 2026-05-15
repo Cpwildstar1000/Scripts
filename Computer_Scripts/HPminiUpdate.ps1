@@ -47,14 +47,11 @@ Write-Host "Please confirm that the Full Computer Name and DNS Computer Name mat
 $Confirmation = Read-Host "Do the computer names match? (Y/N)"
 if ($Confirmation -eq "Y") {
     "User confirmed computer names match" | Tee-Object $LogFile -Append | Write-Host
-}
-else {
-    "User did not confirm computer names match. Please check the computer and try again." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
-    exit
-}
+#}
+
 
 # Run gpupdate on computer
-if ($DNSComputerName -eq $FullComputerName) {
+#if ($DNSComputerName -eq $FullComputerName) {
     # Test if computer is responding
     $Online = 0
     if (Test-Connection $FullComputerName -Count 1 -Quiet) {
@@ -204,6 +201,10 @@ if ($DNSComputerName -eq $FullComputerName) {
         }   
     }
 }
-else {
+<#else {
     "Computer DNS records do not match" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
+}#>
+else {
+    "User did not confirm computer names match. Please check the computer and try again." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
+    exit
 }
