@@ -104,19 +104,19 @@ if ($DNSComputerName -eq $FullComputerName) {
 
 
             # Run installers on remote computer
-            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {C:\DriverInstallFiles\INTEL BLUETOOTH.exe /s}
-            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {C:\DriverInstallFiles\INTEL MGMT DRIVERS.exe /s}
-            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {C:\DriverInstallFiles\INTEL NIC DRIVER.exe /s}
+            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {& 'C:\DriverInstallFiles\INTEL BLUETOOTH.exe' /s}
+            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {& 'C:\DriverInstallFiles\INTEL MGMT DRIVERS.exe' /s}
+            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {& 'C:\DriverInstallFiles\INTEL NIC DRIVER.exe' /s}
             Start-Sleep -Seconds 30
-            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {C:\DriverInstallFiles\INTEL THUNDERBOLT DRIVER.exe /s}
-            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {C:\DriverInstallFiles\INTEL VIDEO AND CONTROL PANEL.exe /s}
-            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {C:\DriverInstallFiles\REALTEK AUDIO DRIVER.exe /s}
-            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {C:\DriverInstallFiles\WIRELESS LAN DRIVERS.exe /s}
+            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {& 'C:\DriverInstallFiles\INTEL THUNDERBOLT DRIVER.exe' /s}
+            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {& 'C:\DriverInstallFiles\INTEL VIDEO AND CONTROL PANEL.exe' /s}
+            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {& 'C:\DriverInstallFiles\REALTEK AUDIO DRIVER.exe' /s}
+            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {& 'C:\DriverInstallFiles\WIRELESS LAN DRIVERS.exe' /s}
             Start-Sleep -Seconds 30
-            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {C:\DriverInstallFiles\INTEL BLUETOOTH.exe /s}
+            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {& 'C:\DriverInstallFiles\INTEL BLUETOOTH.exe' /s}
             
             if ($CurrentBIOSVerion -lt '2.24.') {
-                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {C:\DriverInstallFiles\BIOS HP S22 Ver.02.24.00 Rev.A, 12-8-2025 sp166136.exe /s}
+                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {& 'C:\DriverInstallFiles\BIOS HP S22 Ver.02.24.00 Rev.A, 12-8-2025 sp166136.exe' /s}
             }
             # Wait while installing wireless driver to continue until computer is responding again
             While (!(Test-Connection $FullComputerName)) {Write-Host "Waiting for computer to start connect. If waiting for long period, check computer."}
