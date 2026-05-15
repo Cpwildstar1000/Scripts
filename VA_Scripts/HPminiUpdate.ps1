@@ -10,10 +10,12 @@ $LogFileName = "HPUpdateLog"
 $Date = Get-Date -Format "MMddyy"
 $LogFileFormatType = ".txt"
 $LogFileFullName = "$LogFileName" + "$Date" + "$LogFileFormatType"
-$script:LogFile = "$LogFileLocation" + "$LogFileFullName"
+$LogFile = "$LogFileLocation" + "$LogFileFullName"
 
 if (!(Test-Path "$LogFile")) {
     New-Item -Path "$LogFileLocation" -Name "$LogFileFullName" -ItemType File
+    $FileCreation = "Created log file: $LogFile" | Tee-Object $LogFile -Append
+    Write-Host $FileCreation
 }
 
 # Get computer name and IP address
@@ -28,35 +30,29 @@ if ($DNSComputerName -eq $FullComputerName) {
     $Online = 0
     if (Test-Connection $FullComputerName -Count 1 -Quiet) {
         $Online = 1
-        Write-Host "Computer is ONLINE" | Out-File $LogFile -Append
+        "Computer is ONLINE" | Tee-Object $LogFile -Append | Write-Host
     }
-    else {Write-Host "Computer $FullComputerName is offline. Please check computer and try again"}
+    else {"Computer $FullComputerName is offline. Please check computer and try again" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red}
     
     # Continue if computer is online
     if ($Online -eq "1") {
         # Update remote computer
         try {
-            Write-Host "Updating remote computer: $FullComputerName" -ForegroundColor Green
+            "Updating remote computer: $FullComputerName" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
             Invoke-Command -ComputerName $FullComputerName -ScriptBlock {
                 ############
                 # gpupdate #
                 ############
                 # Get last gpupdate time before update and display it
                 $LastUpdate = [datetime]::FromFileTime(([Int64] ((Get-ItemProperty -Path "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Extension-List\{00000000-0000-0000-0000-000000000000}").startTimeHi) -shl 32) -bor ((Get-ItemProperty -Path "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Extension-List\{00000000-0000-0000-0000-000000000000}").startTimeLo))
-                $LastGPUpdate = Write-Host "Last gpupdate time: $LastUpdate" -ForegroundColor Yellow
-                $LastGPUpdate | Out-File $LogFile -Append
-                $LastGPUpdate
+                "Last gpupdate time: $LastUpdate" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
                 # Update the computer (this is a placeholder, replace with actual update commands)
-                $RunningGPUpdate = Write-Host "Running updates on $env:COMPUTERNAME" -ForegroundColor Cyan
-                $RunningGPUpdate | Out-File $LogFile -Append
-                $RunningGPUpdate
+                "Running updates on $env:COMPUTERNAME" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Cyan
                 # Example: Install-WindowsUpdate -AcceptAll -AutoReboot
                 gpupdate /force
                 # Get recent update time and display it
                 $CurrentUpdate = [datetime]::FromFileTime(([Int64] ((Get-ItemProperty -Path "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Extension-List\{00000000-0000-0000-0000-000000000000}").startTimeHi) -shl 32) -bor ((Get-ItemProperty -Path "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Extension-List\{00000000-0000-0000-0000-000000000000}").startTimeLo))
-                $CurrentGPUpdate = Write-Host "Current gpupdate time: $CurrentUpdate" -ForegroundColor Yellow
-                $CurrentGPUpdate | Out-File $LogFile -Append
-                $CurrentGPUpdate
+                "Current gpupdate time: $CurrentUpdate" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
             }
             #################
             # Driver Update #
@@ -64,13 +60,27 @@ if ($DNSComputerName -eq $FullComputerName) {
             # Confirm connection to driver folder
             if (Test-Path "\\mad-wsitbob\C$") {
                 # Get current driver versions and output them to the log file
-                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_BIOS | Select-Object SMBIOSBIOSVersion} | Out-File $LogFile -Append
-                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wireless Bluetooth (R)'"} | Out-File $LogFile -Append
-                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Management Engine WMI Provider'"} | Out-File $LogFile -Append
-                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Ethernet Connection (11) I219-LM'"} | Out-File $LogFile -Append
-                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wi-Fi 6 AX201 160MHz'"} | Out-File $LogFile -Append
-                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) UHD Graphics 630'"} | Out-File $LogFile -Append
-                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Realtek High Definition Audio'"} | Out-File $LogFile -Append
+                $BIOSCommandOutput = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_BIOS | Select-Object SMBIOSBIOSVersion}
+                $CurrentBIOSVerion =  (($BIOSCommandOutput) -split "0")[1] | Tee-Object $LogFile -Append | Write-Host
+                
+                "Intel(R) Wireless Bluetooth (R)" | Tee-Object $LogFile -Append | Write-Host
+                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wireless Bluetooth (R)'" | Select-Object DriverVersion} | Tee-Object $LogFile -Append | Write-Host
+
+                "Intel(R) Management Engine WMI Provider" | Tee-Object $LogFile -Append | Write-Host
+                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Management Engine WMI Provider'" | Select-Object DriverVersion} | Tee-Object $LogFile -Append | Write-Host
+                
+                "Intel(R) Ethernet Connection (11) I219-LM" | Tee-Object $LogFile -Append | Write-Host
+                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Ethernet Connection (11) I219-LM'" | Select-Object DriverVersion} | Tee-Object $LogFile -Append | Write-Host
+
+                "Intel(R) Wi-Fi 6 AX201 160MHz" | Tee-Object $LogFile -Append | Write-Host
+                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wi-Fi 6 AX201 160MHz'" | Select-Object DriverVersion} | Tee-Object $LogFile -Append | Write-Host
+
+                "Intel(R) UHD Graphics 630" | Tee-Object $LogFile -Append | Write-Host
+                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) UHD Graphics 630'" | Select-Object DriverVersion} | Tee-Object $LogFile -Append | Write-Host
+
+                "Realtek High Definition Audio" | Tee-Object $LogFile -Append | Write-Host
+                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Realtek High Definition Audio'" | Select-Object DrvierVersion} | Tee-Object $LogFile -Append | Write-Host
+
 
                 # Run installers on remote computer
                 Invoke-Command -ComputerName $FullComputerName -ScriptBlock {& '\\MAD-WSITBOB\C$\Shares\Shared\Drivers\HP\HP 600 G6 Mini\INTEL BLUETOOTH.exe' /s}
@@ -84,36 +94,40 @@ if ($DNSComputerName -eq $FullComputerName) {
                 Start-Sleep -Seconds 30
                 Invoke-Command -ComputerName $FullComputerName -ScriptBlock {& '\\MAD-WSITBOB\C$\Shares\Shared\Drivers\HP\HP 600 G6 Mini\INTEL BLUETOOTH.exe' /s}
                 
-                # Check current BIOS version and install 
-                $BIOSCommandOutput = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_BIOS | Select-Object SMBIOSBIOSVersion}
-                $CurrentBIOSVerion =  (($BIOSCommandOutput) -split "0")[1]
                 if ($CurrentBIOSVerion -lt '2.24.') {
                     Invoke-Command -ComputerName $FullComputerName -ScriptBlock {& '\\MAD-WSITBOB\C$\Shares\Shared\Drivers\HP\HP 600 G6 Mini\BIOS HP S22 Ver.02.24.00 Rev.A, 12-8-2025 sp166136.exe' /s}
                 }
                 # Wait while installing wireless driver to continue until computer is responding again
                 While (!(Test-Connection $FullComputerName)) {Write-Host "Waiting for computer to start connect. If waiting for long period, check computer."}
                 # Confirm driver installs are matching versions
-                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_BIOS | Select-Object SMBIOSBIOSVersion} | Out-File $LogFile -Append
-                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wireless Bluetooth (R)'"} | Out-File $LogFile -Append
-                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Management Engine WMI Provider'"} | Out-File $LogFile -Append
-                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Ethernet Connection (11) I219-LM'"} | Out-File $LogFile -Append
-                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wi-Fi 6 AX201 160MHz'"} | Out-File $LogFile  -Append
-                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) UHD Graphics 630'"} | Out-File $LogFile -Append
-                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Realtek High Definition Audio'"} | Out-File $LogFile -Append
+                $BIOSCommandOutput = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_BIOS | Select-Object SMBIOSBIOSVersion}
+                $CurrentBIOSVerion =  (($BIOSCommandOutput) -split "0")[1] | Tee-Object $LogFile -Append | Write-Host
+                
+                "Intel(R) Wireless Bluetooth (R)" | Tee-Object $LogFile -Append | Write-Host
+                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wireless Bluetooth (R)'" | Select-Object DriverVersion} | Tee-Object $LogFile -Append | Write-Host
+
+                "Intel(R) Management Engine WMI Provider" | Tee-Object $LogFile -Append | Write-Host
+                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Management Engine WMI Provider'" | Select-Object DriverVersion} | Tee-Object $LogFile -Append | Write-Host
+                
+                "Intel(R) Ethernet Connection (11) I219-LM" | Tee-Object $LogFile -Append | Write-Host
+                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Ethernet Connection (11) I219-LM'" | Select-Object DriverVersion} | Tee-Object $LogFile -Append | Write-Host
+
+                "Intel(R) Wi-Fi 6 AX201 160MHz" | Tee-Object $LogFile -Append | Write-Host
+                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wi-Fi 6 AX201 160MHz'" | Select-Object DriverVersion} | Tee-Object $LogFile -Append | Write-Host
+
+                "Intel(R) UHD Graphics 630" | Tee-Object $LogFile -Append | Write-Host
+                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) UHD Graphics 630'" | Select-Object DriverVersion} | Tee-Object $LogFile -Append | Write-Host
+
+                "Realtek High Definition Audio" | Tee-Object $LogFile -Append | Write-Host
+                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Realtek High Definition Audio'" | Select-Object DrvierVersion} | Tee-Object $LogFile -Append | Write-Host
             }
-        $Success = Write-Host "Update completed successfully on $FullComputerName" -ForegroundColor Green
-        $Success | Out-File $LogFile -Append
-        $Success
+        "Update completed successfully on $FullComputerName" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
         }
         catch {
-            $Failure = Write-Host "An error occurred while updating $FullComputerName : $_" -ForegroundColor Red
-            $Failure | Out-File $LogFile -Append
-            $Failure
+            "An error occurred while updating $FullComputerName : $_" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
         }   
     }
 }
 else {
-    $DNSFailure = Write-Host "Computer DNS records do not match" -ForegroundColor Red
-    $DNSFailure | Out-File $LogFile -Append
-    $DNSFailure
+    "Computer DNS records do not match" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
 }
