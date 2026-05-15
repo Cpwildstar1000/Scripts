@@ -1,14 +1,8 @@
-#################
-# Things to add #
-#################
-# Error logging
-
-#################
-# Things to Fix #
-#################
-# Fix Log File output
-# Add user confirmation that DNS names match
-
+###################################################################
+# HP Mini Update Script disigned to update HP 600 G6 Mini devices #
+# Creator Christopher Pulvermacher                                #  
+# Last Edited: 05/15/2026                                         #
+###################################################################
 
 # Set up Driver Files in array for later copy
 $DriverFiles = @(
