@@ -71,9 +71,12 @@ if ($DNSComputerName -eq $FullComputerName) {
             # Driver Update #
             #################
             # Copy driver installers locally to computer
-            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {New-Item -Path "C:\" -Name "DriverInstallFiles" -ItemType Directory}
-            if (Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Test-Path C:\DriverInstallFiles}) {
+            $TestForDriversFolderOnComputer = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Test-Path C:\DriverInstallFiles}
+            if (!($TestForDriversFolderOnComputer)) {Invoke-Command -ComputerName $FullComputerName -ScriptBlock {
+                New-Item -Path "C:\" -Name "DriverInstallFiles" -ItemType Directory}
                 "Folder C:\DriverInstallFiles was created" | Tee-Object $LogFile -Append | Write-Host
+            }
+            if (Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Test-Path C:\DriverInstallFiles}) {
                 foreach ($Driver in $DriverFiles) {
                     Copy-Item -Path "\\mad-wsitbob\C$\Shares\Shared\Drivers\HP\HP 600 G6 Mini\$Driver.exe" -Destination "\\$FullComputerName\C$\DriverInstallFiles\$Driver.exe"
                     "Copied $Driver to $FullComputerName" | Tee-Object $LogFile -Append | Write-Host
