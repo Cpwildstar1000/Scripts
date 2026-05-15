@@ -7,6 +7,7 @@
 # Things to Fix #
 #################
 # Fix Log File output
+# Clean up copied driver files
 
 
 # Set up Driver Files in array for later copy
