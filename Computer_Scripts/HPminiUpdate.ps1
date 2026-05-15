@@ -7,7 +7,7 @@
 # Things to Fix #
 #################
 # Fix Log File output
-# Clean up copied driver files
+# Add user confirmation that DNS names match
 
 
 # Set up Driver Files in array for later copy
@@ -39,6 +39,19 @@ $ComputerName = Read-Host "Enter the computer name to update"
 $FullComputerName = (Resolve-DnsName $ComputerName).Name
 $ComputerIP = (Resolve-DnsName $ComputerName).IPAddress
 $DNSComputerName = (Resolve-DnsName $ComputerIP).NameHost
+
+# Confirm DNS Names match with user before testing with if statement
+"Full Computer Name: $FullComputerName" | Tee-Object $LogFile -Append | Write-Host
+"DNS Computer Name: $DNSComputerName" | Tee-Object $LogFile -Append | Write-Host
+Write-Host "Please confirm that the Full Computer Name and DNS Computer Name match. If they do not match, please check the computer and try again." -ForegroundColor Yellow
+$Confirmation = Read-Host "Do the computer names match? (Y/N)"
+if ($Confirmation -eq "Y") {
+    "User confirmed computer names match" | Tee-Object $LogFile -Append | Write-Host
+}
+else {
+    "User did not confirm computer names match. Please check the computer and try again." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
+    exit
+}
 
 # Run gpupdate on computer
 if ($DNSComputerName -eq $FullComputerName) {
@@ -178,6 +191,13 @@ if ($DNSComputerName -eq $FullComputerName) {
             $PostUpdateAudioDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkYellow
 
             "Update completed successfully on $FullComputerName" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
+
+            #########################
+            # Clean up driver files #
+            #########################
+            "Starting cleanup of driver installation folder and files" | Tee-Object $LogFile -Append | Write-Host
+            Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Remove-Item C:\DriverInstallFiles -Recurse}
+            "Cleaned up driver installation folder and files" | Tee-Object $LogFile -Append | Write-Host
         }
         catch {
             "An error occurred while updating $FullComputerName : $_" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
