@@ -155,8 +155,15 @@ if ($Confirmation -eq "Y") {
             "Ran Wi-Fi driver update" | Tee-Object $LogFile -Append | Write-Host
             Start-Sleep -Seconds 30
 
-            # Wait while installing wireless driver to continue until computer is responding again
-            While (!(Test-Connection $FullComputerName)) {Write-Host "Waiting for computer to start connect. If waiting for long period, check computer."}
+            # Wait for computer restart to continue until computer is responding again
+            try {
+                "Computer is restarting. Waiting for $FullComputerName to come back online..." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
+                Restart-Computer -ComputerName $FullComputerName -Force -Wait -For PowerShell -Timeout 600 -Delay 5
+             }
+            catch {
+                "Failed to restart or reconnect within the timeout period." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
+                "$_.Exception.Message" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
+            }
             
             "Intel(R) Wireless Bluetooth(R)" | Tee-Object $LogFile -Append | Write-Host
             $PostUpdateBluetoothDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wireless Bluetooth(R)'"}
