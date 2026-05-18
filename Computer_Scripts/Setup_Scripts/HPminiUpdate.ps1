@@ -33,20 +33,17 @@ $ComputerName = Read-Host "Enter the computer name to update"
 $FullComputerName = (Resolve-DnsName $ComputerName).Name
 $ComputerIP = (Resolve-DnsName $ComputerName).IPAddress
 $DNSComputerName = (Resolve-DnsName $ComputerIP).NameHost
+$TestConnectionHost = (Test-Connection $ComputerIP -Count 1 -Quiet).Source
 
 # Confirm DNS Names match with user before testing with if statement
 "Full Computer Name: $FullComputerName" | Tee-Object $LogFile -Append | Write-Host
 "DNS Computer Name: $DNSComputerName" | Tee-Object $LogFile -Append | Write-Host
-Write-Host "Please confirm that the Full Computer Name and DNS Computer Name match. If they do not match, please check the computer and try again." -ForegroundColor Yellow
+"Test Connection Host: $TestConnectionHost" | Tee-Object $LogFile -Append | Write-Host
+Write-Host "Please confirm that the Full Computer Name, DNS Computer Name, and Test Connection Host match. If they do not match, please check the computer and try again." -ForegroundColor Yellow
 $Confirmation = Read-Host "Do the computer names match? (Y/N)"
 if ($Confirmation -eq "Y") {
     "User confirmed computer names match" | Tee-Object $LogFile -Append | Write-Host
-#}
 
-
-# Run gpupdate on computer
-#if ($DNSComputerName -eq $FullComputerName) {
-    # Test if computer is responding
     $Online = 0
     if (Test-Connection $FullComputerName -Count 1 -Quiet) {
         $Online = 1
@@ -145,17 +142,8 @@ if ($Confirmation -eq "Y") {
             "Ran Wi-Fi driver update" | Tee-Object $LogFile -Append | Write-Host
             Start-Sleep -Seconds 30
 
-            <#if ($PreUpdateBIOS -lt '2.24.') {
-                Invoke-Command -ComputerName $FullComputerName -ScriptBlock {& 'C:\DriverInstallFiles\BIOS HP S22 Ver.02.24.00 Rev.A, 12-8-2025 sp166136.exe' /s}
-                "Ran BIOS update" | Tee-Object $LogFile -Append | Write-Host
-                Start-Sleep -Seconds 30
-            }#>
-
             # Wait while installing wireless driver to continue until computer is responding again
             While (!(Test-Connection $FullComputerName)) {Write-Host "Waiting for computer to start connect. If waiting for long period, check computer."}
-            # Confirm driver installs are matching versions
-            #$PostUpdateBIOS = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_BIOS | Select-Object SMBIOSBIOSVersion}
-            #(($PostUpdateBIOS) -split "0")[1] | Tee-Object $LogFile -Append | Write-Host
             
             "Intel(R) Wireless Bluetooth(R)" | Tee-Object $LogFile -Append | Write-Host
             $PostUpdateBluetoothDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {Get-WMIObject Win32_PNPSignedDriver -Filter "Description='Intel(R) Wireless Bluetooth(R)'"}
@@ -195,9 +183,6 @@ if ($Confirmation -eq "Y") {
         }   
     }
 }
-<#else {
-    "Computer DNS records do not match" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
-}#>
 else {
     "User did not confirm computer names match. Please check the computer and try again." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
     exit
