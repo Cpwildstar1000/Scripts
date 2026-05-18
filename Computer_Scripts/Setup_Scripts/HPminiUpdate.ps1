@@ -15,7 +15,7 @@ $DriverFiles = @(
     'WIRELESS LAN DRIVERS'
 )
 
-# Create and write to file on computer to store the update log
+<# Create and write to file on computer to store the update log
 $LogFileLocation = "C:\"
 $LogFileName = "HPUpdateLog"
 $Date = Get-Date -Format "MMddyy"
@@ -26,14 +26,27 @@ $LogFile = "$LogFileLocation" + "$LogFileFullName"
 if (!(Test-Path "$LogFile")) {
     New-Item -Path "$LogFileLocation" -Name "$LogFileFullName" -ItemType File
     "Created log file: $LogFile" | Tee-Object $LogFile -Append | Write-Host
-}
+}#>
 
 # Get computer name and IP address
 $ComputerName = Read-Host "Enter the computer name to update"
 $FullComputerName = (Resolve-DnsName $ComputerName).Name
 $ComputerIP = (Resolve-DnsName $ComputerName).IPAddress
 $DNSComputerName = (Resolve-DnsName $ComputerIP).NameHost
-$TestConnectionHost = (Test-Connection $ComputerIP -Count 1 -Quiet).Source
+$TestConnectionHost = (Test-Connection $ComputerIP -Count 1).Source
+
+# Create and write to file on computer to store the update log
+$LogFileLocation = "C:\"
+$LogFileName = "HPUpdateLog_$ComputerName"
+$Date = Get-Date -Format "MMddyy"
+$LogFileFormatType = ".txt"
+$LogFileFullName = "$LogFileName" + "$Date" + "$LogFileFormatType"
+$LogFile = "$LogFileLocation" + "$LogFileFullName"
+
+if (!(Test-Path "$LogFile")) {
+    New-Item -Path "$LogFileLocation" -Name "$LogFileFullName" -ItemType File
+    "Created log file: $LogFile" | Tee-Object $LogFile -Append | Write-Host
+}
 
 # Confirm DNS Names match with user before testing with if statement
 "Full Computer Name: $FullComputerName" | Tee-Object $LogFile -Append | Write-Host
