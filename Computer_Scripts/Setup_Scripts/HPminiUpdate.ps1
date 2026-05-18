@@ -28,6 +28,18 @@ if (!(Test-Path "$LogFile")) {
     "Created log file: $LogFile" | Tee-Object $LogFile -Append | Write-Host
 }#>
 
+# Get directory lists
+$userid = Get-WmiObject win32_computersystem | Select-Object -ExpandProperty username
+$objUser = New-Object System.Security.Principal.NTAccount("$userid")
+$UserSID = $objUser.Translate([System.Security.Principal.SecurityIdentifier]).Value 
+# Get the environment variables needed.
+$UserProfile = (Get-ItemProperty "Registry::\HKEY_USERS\$UserSID\Volatile Environment").UserProfile
+try {$OneDrivePath = (Get-ItemProperty "Registry::\HKEY_USERS\$UserSID\Environment").OneDriveCommercial}
+catch {$OneDrivePath = "None"}
+
+if ($OneDrivePath -eq "None") {$DesktopPath = "$UserProfile\Desktop"}
+else {$DesktopPath = "$OneDrivePath\Desktop"}
+
 # Get computer name and IP address
 $ComputerName = Read-Host "Enter the computer name to update"
 $FullComputerName = (Resolve-DnsName $ComputerName).Name
@@ -36,7 +48,7 @@ $DNSComputerName = (Resolve-DnsName $ComputerIP).NameHost
 $TestConnectionHost = (Test-Connection $ComputerIP -Count 1).Source
 
 # Create and write to file on computer to store the update log
-$LogFileLocation = "C:\"
+$LogFileLocation = "$DesktopPath"
 $LogFileName = "HPUpdateLog_$ComputerName"
 $Date = Get-Date -Format "MMddyy"
 $LogFileFormatType = ".txt"
