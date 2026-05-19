@@ -28,9 +28,9 @@ else {$DesktopPath = "$OneDrivePath\Desktop"}
 
 # Get computer name and IP address
 $ComputerName = Read-Host "Enter the computer name to update"
-$FullComputerName = (Resolve-DnsName $ComputerName -Type A).NameHost
-$ComputerIP = (Resolve-DnsName $ComputerName -Type A).IPAddress
-$DNSComputerName = (Resolve-DnsName $ComputerIP -Type PTR).NameHost
+$FullComputerName = (Resolve-DnsName $ComputerName).Name
+$ComputerIP = (Resolve-DnsName $ComputerName).IPAddress
+$DNSComputerName = (Resolve-DnsName $ComputerIP).NameHost
 $TestConnectionHost = (Test-Connection $ComputerIP -Count 1).Source
 
 # Test to confirm computer is a HP 600 G6 Mini
