@@ -76,7 +76,7 @@ if ($Confirmation -eq "Y") {
     try {
         "Updating remote computer: $FullComputerName" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
 
-        # GPUPDATE
+        # gpupdate
         $LastUpdate = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {
             [datetime]::FromFileTime(
                 ([Int64] ((Get-ItemProperty -Path "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Extension-List\{00000000-0000-0000-0000-000000000000}").startTimeHi) -shl 32) -bor
@@ -97,7 +97,7 @@ if ($Confirmation -eq "Y") {
 
         "Current gpupdate time: $CurrentUpdate" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
 
-        # DRIVER FOLDER CHECK/CREATE
+        # Driver folder check/create
         $TestForDriversFolderOnComputer = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {
             Test-Path C:\DriverInstallFiles
         }
@@ -123,6 +123,7 @@ if ($Confirmation -eq "Y") {
                     throw "$File failed to copy"
                 }
             }
+
         }
 
         # BIOS CHECK (fixed null safety)
@@ -138,8 +139,8 @@ if ($Confirmation -eq "Y") {
             }
         }
 
-        # DRIVER VERSION CHECK (fixed foreach + string expansion)
-        foreach ($Driver in $Drivers) {
+        # Driver version check
+        <#foreach ($Driver in $Drivers) {
             if ($null -ne $Driver.Name) {
 
                 "$($Driver.Name)" | Tee-Object $LogFile -Append | Write-Host
@@ -150,10 +151,22 @@ if ($Confirmation -eq "Y") {
 
                 $PreUpdateDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkYellow
             }
+        }#>
+
+        foreach ($Driver in $Drivers) {
+            if ($null -ne $Driver.Name) {
+                $driverName = $Driver.Name
+                "$driverName" | Tee-Object $LogFile -Append | Write-Host
+                $PreUpdateDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {
+                    param($name)
+                    Get-CimInstance Win32_PNPSignedDriver -Filter "Description='$name'"
+                } -ArgumentList $driverName
+                $PreUpdateDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkYellow
+            }
         }
 
-        # INSTALL DRIVERS (fixed loop structure)
-        foreach ($Driver in $Drivers) {
+        # Install drivers
+        <#foreach ($Driver in $Drivers) {
 
             $File = $Driver.File
 
@@ -170,20 +183,39 @@ if ($Confirmation -eq "Y") {
             if ($ExitCode -ne 0) {
                 throw "$File installer failed with exit code $ExitCode"
             }
+        }#>
+
+        foreach ($Driver in $Drivers) {
+
+            $File = $Driver.File
+
+            $ExitCode = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {
+                param($file)
+
+                Start-Process `
+                    -FilePath "C:\DriverInstallFiles\$file.exe" `
+                    -ArgumentList '/s' `
+                    -Wait `
+                    -PassThru
+            } -ArgumentList $File
+
+            if ($ExitCode.ExitCode -ne 0) {
+                throw "$File installer failed with exit code $($ExitCode.ExitCode)"
+            }
         }
 
-        # RESTART (moved outside loop)
+
+        # Restart computer
         try {
             "Computer is restarting. Waiting for $FullComputerName..." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
-
             Restart-Computer -ComputerName $FullComputerName -Force -Wait -For PowerShell -Timeout 600 -Delay 5
         }
         catch {
             "Failed to restart or reconnect within timeout." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
         }
 
-        # POST CHECK (fixed loop)
-        foreach ($Driver in $Drivers) {
+        # Post update check
+        <#foreach ($Driver in $Drivers) {
             if ($null -ne $Driver.Name) {
 
                 "$($Driver.Name)" | Tee-Object $LogFile -Append | Write-Host
@@ -194,11 +226,23 @@ if ($Confirmation -eq "Y") {
 
                 $PostUpdateDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkYellow
             }
+        }#>
+
+        foreach ($Driver in $Drivers) {
+            if ($null -ne $Driver.Name) {
+                $driverName = $Driver.Name
+                "$driverName" | Tee-Object $LogFile -Append | Write-Host
+                $PreUpdateDriver = Invoke-Command -ComputerName $FullComputerName -ScriptBlock {
+                    param($name)
+                    Get-CimInstance Win32_PNPSignedDriver -Filter "Description='$name'"
+                } -ArgumentList $driverName
+                $PreUpdateDriver.DriverVersion | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkYellow
+            }
         }
 
         "Update completed successfully on $FullComputerName" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
 
-        # CLEANUP
+        # Cleanup folder/files
         Invoke-Command -ComputerName $FullComputerName -ScriptBlock {
             Remove-Item C:\DriverInstallFiles -Recurse -Force -ErrorAction Stop
         }
