@@ -112,7 +112,7 @@ if ($Confirmation -eq "Y") {
 
         "Checking if $Computer has a pending reboot..." | Tee-Object $LogFile -Append | Write-Host
         $PendingRebootStatus = (Get-PendingReboot "$Computer").PendingReboot
-        if ($PendingRebootStatus -eq "True") {
+        if ($PendingRebootStatus) {
             "$Computer has a pending reboot. Checking for logged on users..." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
             $LoggedOnUserQuery = (Get-WmiObject -Class Win32_ComputerSystem -ComputerName $Computer).UserName
             if ($LoggedOnUserQuery) {
