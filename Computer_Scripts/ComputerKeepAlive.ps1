@@ -86,6 +86,7 @@ if ($Confirmation -eq "Y") {
     $currentCount = 0
     "Starting Computer Keep Alive script..." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
     foreach ($Computer in $ComputerList) {
+        Clear-Host
         $Percent = [math]::Round(($currentCount / $TotalComputers) * 100)
         Show-FedoraProgressBar -Percent $Percent -Activity "Running Through Computers"
         
@@ -111,7 +112,7 @@ if ($Confirmation -eq "Y") {
         }
 
         "Checking if $Computer has a pending reboot..." | Tee-Object $LogFile -Append | Write-Host
-        $PendingRebootStatus = (Get-PendingReboot "$Computer").RebootNeeded
+        $PendingRebootStatus = (Get-PendingReboot $Computer).RebootNeeded
         if ($PendingRebootStatus) {
             "$Computer has a pending reboot. Checking for logged on users..." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
             $LoggedOnUserQuery = (Get-WmiObject -Class Win32_ComputerSystem -ComputerName $Computer).UserName
@@ -134,7 +135,6 @@ if ($Confirmation -eq "Y") {
         }
 
         $currentCount++
-        Clear-Host
     }
     "Completed Computer Keep Alive script for $TotalComputers computers." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
 }
