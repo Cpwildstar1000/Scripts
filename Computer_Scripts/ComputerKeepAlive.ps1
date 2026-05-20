@@ -118,16 +118,19 @@ if ($Confirmation -eq "Y") {
             if ($LoggedOnUserQuery) {
                 "There is a user logged on to $Computer : $LoggedOnUserQuery" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
                 "Aborting further actions on $Computer to avoid disruption to logged on user(s)." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
+                Start-Sleep -Seconds 3
             }
             else {
                 "No users are logged on to $Computer." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
                 "Starting reboot of $Computer..." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
                 Restart-Computer -ComputerName $FullComputerName -Force -Wait -For PowerShell -Timeout 600 -Delay 5
                 "$Computer has been rebooted" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
+                Start-Sleep -Seconds 3
             }
         }
         else {
             "$Computer does not have a pending reboot." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
+            Start-Sleep -Seconds 3
         }
 
         $currentCount++
