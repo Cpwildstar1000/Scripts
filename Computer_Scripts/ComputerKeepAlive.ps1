@@ -54,6 +54,24 @@ if (!(Test-Path $DesktopPath\ComputerKeepAliveList.txt)) {
     "Created computer list file: $DesktopPath\ComputerKeepAliveList.txt" | Tee-Object $LogFile -Append | Write-Host
 }
 
+function Get-PendingReboot {
+    param(
+        [string[]]$ComputerName = "localhost"
+    )
+    foreach ($Computer in $ComputerName) {
+    # Check for pending reboot registry keys
+    $HKLM = [Microsoft.Win32.RegistryKey]::OpenRemoteBaseKey('LocalMachine', $Computer)
+    $CBS = $HKLM.OpenSubKey("SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending")
+    $WU = $HKLM.OpenSubKey("SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired")
+    $SM = $HKLM.OpenSubKey("SYSTEM\CurrentControlSet\Control\Session Manager")
+    $Rename = $SM.GetValue("PendingFileRenameOperations")
+    $Rename2 = $SM.GetValue("PendingFileRenameOperations2")
+    [PSCustomObject]@{
+        Computer = $Computer
+        RebootNeeded = [bool]($CBS -or $WU -or $Rename -or $Rename2)
+    }
+}
+
 # Confirm user is ready for script to run
 "Please make sure the computers you want to run the script against are listed in $DesktopPath\ComputerKeepAliveList.txt, with one computer name per line." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
 $Confirmation = Read-Host "Ready to run the script? (Y/N)"Pause
@@ -90,7 +108,27 @@ if ($Confirmation -eq "Y") {
             Invoke-Command -ComputerName $DNSName -ScriptBlock {gpupdate} | Out-Null
             "Completed GPUpdate on $Computer" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
         }
-                
+
+        "Checking if $Computer has a pending reboot..." | Tee-Object $LogFile -Append | Write-Host
+        $PendingRebootStatus = (Get-PendingReboot "$Computer").PendingReboot
+        if ($PendingRebootStatus -eq "True") {
+            "$Computer has a pending reboot. Checking for logged on users..." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
+            $LoggedOnUserQuery = (Get-WmiObject -Class Win32_ComputerSystem -ComputerName $Computer).UserName
+            if ($LoggedOnUserQuery) {
+                "There is a user logged on to $Computer : $LoggedOnUserQuery" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
+                "Aborting further actions on $Computer to avoid disruption to logged on user(s)." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
+            }
+            else {
+                "No users are logged on to $Computer." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
+                "Starting reboot of $Computer..." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
+                Restart-Computer -ComputerName $FullComputerName -Force -Wait -For PowerShell -Timeout 600 -Delay 5
+                "$Computer has been rebooted" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
+            }
+        }
+        else {
+            "$Computer does not have a pending reboot." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
+        }
+
         $currentCount++
         Clear-Host
     }
