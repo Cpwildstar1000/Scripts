@@ -66,9 +66,10 @@ function Get-PendingReboot {
     $SM = $HKLM.OpenSubKey("SYSTEM\CurrentControlSet\Control\Session Manager")
     $Rename = $SM.GetValue("PendingFileRenameOperations")
     $Rename2 = $SM.GetValue("PendingFileRenameOperations2")
-    [PSCustomObject]@{
-        Computer = $Computer
-        RebootNeeded = [bool]($CBS -or $WU -or $Rename -or $Rename2)
+        [PSCustomObject]@{
+            Computer = $Computer
+            RebootNeeded = [bool]($CBS -or $WU -or $Rename -or $Rename2)
+        }
     }
 }
 
