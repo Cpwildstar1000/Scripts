@@ -81,9 +81,16 @@ if ($Confirmation -eq "Y") {
         
         "Starting GPUpdate on $Computer..." | Tee-Object $LogFile -Append | Write-Host
         $DNSName = (Resolve-DnsName $Computer).Name
-        Invoke-Command -ComputerName $DNSName -ScriptBlock {gpupdate} | Out-Null
-        "Completed GPUpdate on $Computer" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
-        
+        if (!($DNSName)) {
+            "Failed to resolve DNS name for $Computer. Skipping GPUpdate." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
+            continue
+        }
+        else {
+            "Resolved DNS name for $Computer : $DNSName" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
+            Invoke-Command -ComputerName $DNSName -ScriptBlock {gpupdate} | Out-Null
+            "Completed GPUpdate on $Computer" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
+        }
+                
         $currentCount++
         Clear-Host
     }
