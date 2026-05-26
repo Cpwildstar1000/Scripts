@@ -60,12 +60,12 @@ else {$DesktopPath = "$OneDrivePath\Desktop"}
 # Create log file
 $LogFileLocation = "$DesktopPath"
 $LogFileName = "ComputerKeepAliveLog"
-#$Date = Get-Date -Format "MMddyy"
+$Date = Get-Date -Format "MMddyy"
 $LogFileFormatType = ".txt"
 $LogFileFullName = "$LogFileName$LogFileFormatType"
 $LogFile = Join-Path $LogFileLocation $LogFileFullName
 
-if (Test-Path $LogFile) {"`r`n`r`n" | Tee-Object $LogFile -Append}
+if (Test-Path $LogFile) {"`r`n`r`n$Date`r`n" | Tee-Object $LogFile -Append}
 
 # Confirm ComputerKeepAliveList.txt exists on desktop
 if (!(Test-Path $DesktopPath\ComputerKeepAliveList.txt)) {
