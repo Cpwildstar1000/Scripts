@@ -67,6 +67,13 @@ $LogFile = Join-Path $LogFileLocation $LogFileFullName
 
 if (Test-Path $LogFile) {"`r`n`r`n$Date`r`n" | Tee-Object $LogFile -Append}
 
+# Create tracking Variables
+
+$RestartedComputers = 0
+$RestartedComputersList = @()
+$NeedsUpdate = 0
+$NeedsUpdateList = @()
+
 # Confirm ComputerKeepAliveList.txt exists on desktop
 if (!(Test-Path $DesktopPath\ComputerKeepAliveList.txt)) {
     New-Item -Path $DesktopPath -Name "ComputerKeepAliveList.txt" -ItemType File | Out-Null
@@ -119,6 +126,8 @@ if ($Confirmation -eq "Y") {
             if ($LoggedOnUserQuery) {
                 "There is a user logged on to $Computer : $LoggedOnUserQuery" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
                 "Aborting further actions on $Computer to avoid disruption to logged on user(s)." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
+                $NeedsUpdateList += $Computer
+                $NeedsUpdate++
                 Start-Sleep -Seconds 3
             }
             else {
@@ -126,6 +135,8 @@ if ($Confirmation -eq "Y") {
                 "Starting reboot of $Computer..." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
                 Restart-Computer -ComputerName $DNSName -Force -Wait -For PowerShell -Timeout 600 -Delay 5
                 "$Computer has been rebooted" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
+                $RestartedComputersList += $Computer
+                $RestartedComputers++
                 Start-Sleep -Seconds 3
             }
         }
@@ -137,4 +148,7 @@ if ($Confirmation -eq "Y") {
         $currentCount++
     }
     "Completed Computer Keep Alive script for $TotalComputers computers." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
+    "Computers Restarted: $RestartedComputers" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkCyan
+    "Computers that still need reboot: $NeedsUpdate" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkCyan
+    $NeedsUpdateList | Tee-Object $LogFile -Append
 }
