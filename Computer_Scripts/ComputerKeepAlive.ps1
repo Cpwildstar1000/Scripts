@@ -46,6 +46,152 @@ function Get-PendingReboot {
     }
 }
 
+# --- Remote restart timer and cancellation helpers ---
+function Start-RemoteRestartTimer {
+    param(
+        [Parameter(Mandatory=$true)][string]$ComputerName,
+        [int]$DelayMinutes = 5
+    )
+    $id = [guid]::NewGuid().ToString()
+
+    # Ensure temp folder exists on remote machine
+    Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+        if (!(Test-Path -Path C:\Temp)) { New-Item -Path C:\Temp -ItemType Directory -Force | Out-Null }
+    } -ErrorAction SilentlyContinue
+
+    # Notify logged on users (best-effort). Provide cancel instruction including ID.
+    $message = "A restart is scheduled in $DelayMinutes minute(s). To cancel, run an elevated PowerShell on this PC and create the file C:\Temp\RestartCancel_$id.txt"
+    Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+        param($m)
+        try {
+            foreach ($line in (quser 2>$null)) {
+                if ($line.Trim()) {
+                    $parts = $line -split '\s+'
+                    $username = $parts[0]
+                    try { msg $username $m } catch { }
+                }
+            }
+        } catch {
+            try { msg * $m } catch { }
+        }
+    } -ArgumentList $message -ErrorAction SilentlyContinue
+
+    # Start a local background job to wait for delay, watch for cancel flag, then restart
+    $job = Start-Job -Name "RestartTimer_$id" -ScriptBlock {
+        param($ComputerName, $DelayMinutes, $id)
+        $endTime = (Get-Date).AddMinutes($DelayMinutes)
+        while ((Get-Date) -lt $endTime) {
+            Start-Sleep -Seconds 5
+            $canceled = $false
+            try {
+                $canceled = Invoke-Command -ComputerName $ComputerName -ScriptBlock { param($id) Test-Path "C:\Temp\RestartCancel_$id.txt" } -ArgumentList $id -ErrorAction SilentlyContinue
+            } catch { $canceled = $false }
+            if ($canceled) {
+                # remove cancel flag
+                Invoke-Command -ComputerName $ComputerName -ScriptBlock { param($id) Remove-Item "C:\Temp\RestartCancel_$id.txt" -ErrorAction SilentlyContinue } -ArgumentList $id -ErrorAction SilentlyContinue
+                Write-Output "CANCELED:$ComputerName:$id"
+                return
+            }
+        }
+        # final cancel check
+        try {
+            $canceled = Invoke-Command -ComputerName $ComputerName -ScriptBlock { param($id) Test-Path "C:\Temp\RestartCancel_$id.txt" } -ArgumentList $id -ErrorAction SilentlyContinue
+        } catch { $canceled = $false }
+        if ($canceled) {
+            Invoke-Command -ComputerName $ComputerName -ScriptBlock { param($id) Remove-Item "C:\Temp\RestartCancel_$id.txt" -ErrorAction SilentlyContinue } -ArgumentList $id -ErrorAction SilentlyContinue
+            Write-Output "CANCELED:$ComputerName:$id"
+            return
+        }
+        try {
+            Restart-Computer -ComputerName $ComputerName -Force -ErrorAction Stop
+            Write-Output "RESTARTED:$ComputerName:$id"
+        } catch {
+            Write-Output "FAILED:$ComputerName:$id:$($_.Exception.Message)"
+        }
+    } -ArgumentList $ComputerName, $DelayMinutes, $id
+
+    # Return job id pair to caller
+    ,@{ Id = $id; Job = $job }
+}
+
+function Cancel-RemoteRestart {
+    param(
+        [Parameter(Mandatory=$true)][string]$ComputerName,
+        [Parameter(Mandatory=$true)][string]$Id
+    )
+    Invoke-Command -ComputerName $ComputerName -ScriptBlock { param($id) if (!(Test-Path -Path C:\Temp)) { New-Item -Path C:\Temp -ItemType Directory -Force | Out-Null }; New-Item -Path "C:\Temp\RestartCancel_$id.txt" -ItemType File -Force | Out-Null } -ArgumentList $Id -ErrorAction SilentlyContinue
+    Write-Output "Cancel flag created on $ComputerName for $Id"
+}
+
+function Wait-ForRestartJobs {
+    param(
+        [Parameter(Mandatory=$true)][array]$Jobs
+    )
+    if (-not $Jobs) { return }
+    while ($true) {
+        foreach ($j in $Jobs.ToArray()) {
+            if ($j.State -in 'Completed','Failed','Stopped') {
+                $out = Receive-Job -Job $j -Keep
+                foreach ($line in $out) {
+                    if ($line -like 'CANCELED:*') {
+                        $parts = $line -split ':'
+                        Write-Host "Restart canceled for $($parts[1]) (id $($parts[2]))" -ForegroundColor Yellow
+                    } elseif ($line -like 'RESTARTED:*') {
+                        $parts = $line -split ':'
+                        Write-Host "Restarted $($parts[1]) (id $($parts[2]))" -ForegroundColor Green
+                    } elseif ($line -like 'FAILED:*') {
+                        $parts = $line -split ':'
+                        Write-Host "Restart failed for $($parts[1]) (id $($parts[2])) - $($parts[3])" -ForegroundColor Red
+                    } else {
+                        Write-Host $line
+                    }
+                }
+                Remove-Job -Job $j -Force -ErrorAction SilentlyContinue
+                $Jobs = $Jobs | Where-Object { $_.Id -ne $j.Id }
+            }
+        }
+        if (-not ($Jobs | Where-Object { $_.State -eq 'Running' })) { break }
+        Start-Sleep -Seconds 2
+    }
+}
+
+<#function Reboot-Computer {
+    param(
+        [string[]]$DelayTime
+    )
+    try {
+        # Delay time
+        $DelayConfirmed = 300
+        $DelayTimeDisplay = $DelayTime/60
+
+        # Create user popup for confirmation
+        $PopupTitle = "Pending Restart Confirmation"
+        $RestartMessage = "This system is scheduled to restart in $DelayTimeDisplay minutes. Do you want to proceed?"
+
+        # Show popup to user
+        $Result = [System.Windows.MessageBox]::Show(
+            $PopupTitle,
+            $RestartMessage,
+            'YesNo',
+            'Warning'
+        )
+
+        if ($Result -eq 'Yes') {
+            shutdown -r -t $DelayConfirmed /c "System will restart in $DelayTimeDisplay minutes."
+        }
+        elseif ($Result -eq 'No') {
+            shutdown -a
+            Write-Host "Shutdown canceled by user."
+        }
+        else {
+
+        }
+    }
+    catch {
+
+    }
+}#>
+
 # Get directory lists
 $userid = Get-CimInstance win32_computersystem | Select-Object -ExpandProperty username
 $objUser = New-Object System.Security.Principal.NTAccount("$userid")
@@ -73,6 +219,7 @@ $RestartedComputers = 0
 $RestartedComputersList = @()
 $NeedsUpdate = 0
 $NeedsUpdateList = @()
+$RestartJobs = @()
 
 # Confirm ComputerKeepAliveList.txt exists on desktop
 if (!(Test-Path $DesktopPath\ComputerKeepAliveList.txt)) {
@@ -125,9 +272,20 @@ if ($Confirmation -eq "Y") {
             $LoggedOnUserQuery = (Get-WmiObject -Class Win32_ComputerSystem -ComputerName $Computer).UserName
             if ($LoggedOnUserQuery) {
                 "There is a user logged on to $Computer : $LoggedOnUserQuery" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
-                "Aborting further actions on $Computer to avoid disruption to logged on user(s)." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
-                $NeedsUpdateList += $Computer
-                $NeedsUpdate++
+                # Offer to schedule a delayed restart that will prompt the logged-on user and allow cancellation
+                $delayInput = Read-Host "Enter delay in minutes to notify user and schedule restart (leave blank to skip)"
+                if ([int]::TryParse($delayInput, [ref]$null) -and $delayInput -gt 0) {
+                    $minutes = [int]$delayInput
+                    "Scheduling a $minutes-minute delayed restart for $Computer (ID will be returned)" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Cyan
+                    $res = Start-RemoteRestartTimer -ComputerName $Computer -DelayMinutes $minutes
+                    if ($res -and $res.Job) { $RestartJobs += $res.Job }
+                    $NeedsUpdateList += $Computer
+                    $NeedsUpdate++
+                } else {
+                    "Skipping restart scheduling for $Computer to avoid disrupting logged-on user(s)." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
+                    $NeedsUpdateList += $Computer
+                    $NeedsUpdate++
+                }
                 Start-Sleep -Seconds 3
             }
             else {
@@ -151,4 +309,9 @@ if ($Confirmation -eq "Y") {
     "Computers Restarted: $RestartedComputers" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkCyan
     "Computers that still need reboot: $NeedsUpdate" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkCyan
     $NeedsUpdateList | Tee-Object $LogFile -Append
+    if ($RestartJobs -and $RestartJobs.Count -gt 0) {
+        "There are $($RestartJobs.Count) pending restart timer(s). Monitoring until complete..." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Cyan
+        Wait-ForRestartJobs -Jobs $RestartJobs
+        "All restart timers completed." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
+    }
 }
