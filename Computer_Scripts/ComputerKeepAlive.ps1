@@ -46,7 +46,7 @@ function Get-PendingReboot {
     }
 }
 
-# --- Remote restart timer and cancellation helpers ---
+# Remote restart timer and cancellation helpers
 function Start-RemoteRestartTimer {
     param(
         [Parameter(Mandatory=$true)][string]$ComputerName,
@@ -54,54 +54,43 @@ function Start-RemoteRestartTimer {
     )
     $id = [guid]::NewGuid().ToString()
 
-    # Ensure temp folder exists on remote machine
-    Invoke-Command -ComputerName $ComputerName -ScriptBlock {
-        if (!(Test-Path -Path C:\Temp)) { New-Item -Path C:\Temp -ItemType Directory -Force | Out-Null }
-    } -ErrorAction SilentlyContinue
-
-    # Notify logged on users (best-effort). Provide cancel instruction including ID.
-    $message = "A restart is scheduled in $DelayMinutes minute(s). To cancel, run an elevated PowerShell on this PC and create the file C:\Temp\RestartCancel_$id.txt"
-    Invoke-Command -ComputerName $ComputerName -ScriptBlock {
-        param($m)
-        try {
-            foreach ($line in (quser 2>$null)) {
-                if ($line.Trim()) {
-                    $parts = $line -split '\s+'
-                    $username = $parts[0]
-                    try { msg $username $m } catch { }
-                }
-            }
-        } catch {
-            try { msg * $m } catch { }
-        }
-    } -ArgumentList $message -ErrorAction SilentlyContinue
-
-    # Start a local background job to wait for delay, watch for cancel flag, then restart
+    # Start a local background job to show prompt on remote machine and handle restart
     $job = Start-Job -Name "RestartTimer_$id" -ScriptBlock {
         param($ComputerName, $DelayMinutes, $id)
-        $endTime = (Get-Date).AddMinutes($DelayMinutes)
-        while ((Get-Date) -lt $endTime) {
-            Start-Sleep -Seconds 5
-            $canceled = $false
+        
+        # Show interactive Yes/No prompt to remote user
+        $userResponse = Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+            param($DelayMinutes)
             try {
-                $canceled = Invoke-Command -ComputerName $ComputerName -ScriptBlock { param($id) Test-Path "C:\Temp\RestartCancel_$id.txt" } -ArgumentList $id -ErrorAction SilentlyContinue
-            } catch { $canceled = $false }
-            if ($canceled) {
-                # remove cancel flag
-                Invoke-Command -ComputerName $ComputerName -ScriptBlock { param($id) Remove-Item "C:\Temp\RestartCancel_$id.txt" -ErrorAction SilentlyContinue } -ArgumentList $id -ErrorAction SilentlyContinue
-                Write-Output "CANCELED:$ComputerName:$id"
-                return
+                $result = [System.Windows.Forms.MessageBox]::Show(
+                    "This computer needs to restart. It will restart in $DelayMinutes minute(s).`n`nDo you want to proceed with the restart?",
+                    "System Restart Pending",
+                    [System.Windows.Forms.MessageBoxButtons]::YesNo,
+                    [System.Windows.Forms.MessageBoxIcon]::Warning
+                )
+                if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
+                    return "YES"
+                } else {
+                    return "NO"
+                }
+            } catch {
+                return "ERROR"
             }
-        }
-        # final cancel check
-        try {
-            $canceled = Invoke-Command -ComputerName $ComputerName -ScriptBlock { param($id) Test-Path "C:\Temp\RestartCancel_$id.txt" } -ArgumentList $id -ErrorAction SilentlyContinue
-        } catch { $canceled = $false }
-        if ($canceled) {
-            Invoke-Command -ComputerName $ComputerName -ScriptBlock { param($id) Remove-Item "C:\Temp\RestartCancel_$id.txt" -ErrorAction SilentlyContinue } -ArgumentList $id -ErrorAction SilentlyContinue
+        } -ArgumentList $DelayMinutes -ErrorAction SilentlyContinue
+        
+        if ($userResponse -eq "NO") {
             Write-Output "CANCELED:$ComputerName:$id"
             return
         }
+        
+        if ($userResponse -ne "YES") {
+            Write-Output "FAILED:$ComputerName:$id:Unable to display prompt on remote machine"
+            return
+        }
+        
+        # User selected Yes, wait for delay then restart
+        Start-Sleep -Seconds ($DelayMinutes * 60)
+        
         try {
             Restart-Computer -ComputerName $ComputerName -Force -ErrorAction Stop
             Write-Output "RESTARTED:$ComputerName:$id"
@@ -114,14 +103,6 @@ function Start-RemoteRestartTimer {
     ,@{ Id = $id; Job = $job }
 }
 
-function Cancel-RemoteRestart {
-    param(
-        [Parameter(Mandatory=$true)][string]$ComputerName,
-        [Parameter(Mandatory=$true)][string]$Id
-    )
-    Invoke-Command -ComputerName $ComputerName -ScriptBlock { param($id) if (!(Test-Path -Path C:\Temp)) { New-Item -Path C:\Temp -ItemType Directory -Force | Out-Null }; New-Item -Path "C:\Temp\RestartCancel_$id.txt" -ItemType File -Force | Out-Null } -ArgumentList $Id -ErrorAction SilentlyContinue
-    Write-Output "Cancel flag created on $ComputerName for $Id"
-}
 
 function Wait-ForRestartJobs {
     param(
@@ -129,7 +110,7 @@ function Wait-ForRestartJobs {
     )
     if (-not $Jobs) { return }
     while ($true) {
-        foreach ($j in $Jobs.ToArray()) {
+        foreach ($j in @($Jobs)) {
             if ($j.State -in 'Completed','Failed','Stopped') {
                 $out = Receive-Job -Job $j -Keep
                 foreach ($line in $out) {
