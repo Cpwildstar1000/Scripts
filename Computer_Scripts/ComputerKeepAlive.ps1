@@ -86,12 +86,8 @@ try {
             Set-Content -Path $ScriptPath -Value $PopupScript -Encoding ASCII -Force
 
             $taskCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Normal -File `"$ScriptPath`""
-            schtasks.exe /Create /F /TN $TaskName /TR $taskCommand /SC ONCE /ST 00:00 /RL HIGHEST /RU SYSTEM /IT | Out-Null
-            schtasks.exe /Run /TN $TaskName | Out-Null
-        } -ArgumentList $popupScript, $scriptPath, $taskName -ErrorAction Stop
-
-        $userResponse = $null
-        $deadline = [DateTime]::UtcNow.AddMinutes(15)
+                $startTime = (Get-Date).AddMinutes(1).ToString('HH:mm')
+                schtasks.exe /Create /F /TN $TaskName /TR $taskCommand /SC ONCE /ST $startTime /RL HIGHEST /RU SYSTEM /IT | Out-Null
         while (([DateTime]::UtcNow) -lt $deadline) {
             $userResponse = Invoke-Command -ComputerName $ComputerName -ScriptBlock {
                 param($ResponseFile)
@@ -166,43 +162,6 @@ function Wait-ForRestartJobs {
         Start-Sleep -Seconds 2
     }
 }
-
-<#function Reboot-Computer {
-    param(
-        [string[]]$DelayTime
-    )
-    try {
-        # Delay time
-        $DelayConfirmed = 300
-        $DelayTimeDisplay = $DelayTime/60
-
-        # Create user popup for confirmation
-        $PopupTitle = "Pending Restart Confirmation"
-        $RestartMessage = "This system is scheduled to restart in $DelayTimeDisplay minutes. Do you want to proceed?"
-
-        # Show popup to user
-        $Result = [System.Windows.MessageBox]::Show(
-            $PopupTitle,
-            $RestartMessage,
-            'YesNo',
-            'Warning'
-        )
-
-        if ($Result -eq 'Yes') {
-            shutdown -r -t $DelayConfirmed /c "System will restart in $DelayTimeDisplay minutes."
-        }
-        elseif ($Result -eq 'No') {
-            shutdown -a
-            Write-Host "Shutdown canceled by user."
-        }
-        else {
-
-        }
-    }
-    catch {
-
-    }
-}#>
 
 # Get directory lists
 $userid = Get-CimInstance win32_computersystem | Select-Object -ExpandProperty username
