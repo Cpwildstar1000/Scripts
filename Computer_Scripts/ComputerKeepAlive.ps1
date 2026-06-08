@@ -111,12 +111,12 @@ try {
         } -ArgumentList $taskName, $scriptPath, $responseFile -ErrorAction SilentlyContinue
 
         if ($userResponse -eq 'NO') {
-            Write-Output "CANCELED:$ComputerName:$id"
+            Write-Output "CANCELED:$ComputerName :$id"
             return
         }
 
         if ($userResponse -ne 'YES') {
-            Write-Output "FAILED:$ComputerName:$id:Unable to display prompt on remote machine"
+            Write-Output "FAILED:$ComputerName :$id:Unable to display prompt on remote machine"
             return
         }
 
@@ -124,9 +124,9 @@ try {
 
         try {
             Restart-Computer -ComputerName $ComputerName -Force -ErrorAction Stop
-            Write-Output "RESTARTED:$ComputerName:$id"
+            Write-Output "RESTARTED:$ComputerName :$id"
         } catch {
-            Write-Output "FAILED:$ComputerName:$id:$($_.Exception.Message)"
+            Write-Output "FAILED:$ComputerName :$id:$($_.Exception.Message)"
         }
     } -ArgumentList $ComputerName, $DelayMinutes, $id
 
