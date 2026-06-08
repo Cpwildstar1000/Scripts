@@ -126,7 +126,7 @@ try {
             Restart-Computer -ComputerName $ComputerName -Force -ErrorAction Stop
             Write-Output "RESTARTED:$ComputerName :$id"
         } catch {
-            Write-Output "FAILED:$ComputerName :$id:$($_.Exception.Message)"
+            Write-Output "FAILED:$ComputerName :$id :$($_.Exception.Message)"
         }
     } -ArgumentList $ComputerName, $DelayMinutes, $id
 
