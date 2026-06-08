@@ -57,45 +57,76 @@ function Start-RemoteRestartTimer {
     # Start a local background job to show prompt on remote machine and handle restart
     $job = Start-Job -Name "RestartTimer_$id" -ScriptBlock {
         param($ComputerName, $DelayMinutes, $id)
-        
-        # Show interactive Yes/No prompt to remote user
-        $userResponse = Invoke-Command -ComputerName $ComputerName -ScriptBlock {
-            param($DelayMinutes)
-            try {
-                $result = [System.Windows.Forms.MessageBox]::Show(
-                    "This computer needs to restart. It will restart in $DelayMinutes minute(s).`n`nDo you want to proceed with the restart?",
-                    "System Restart Pending",
-                    [System.Windows.Forms.MessageBoxButtons]::YesNo,
-                    [System.Windows.Forms.MessageBoxIcon]::Warning
-                )
-                if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
-                    return "YES"
-                } else {
-                    return "NO"
+
+        $scriptPath = "C:\Windows\Temp\ComputerKeepAlivePopup-$id.ps1"
+        $responseFile = "C:\Windows\Temp\ComputerKeepAliveResponse-$id.txt"
+        $taskName = "ComputerKeepAlivePrompt-$id"
+
+        $popupScript = @"
+Add-Type -AssemblyName System.Windows.Forms
+try {
+    `$result = [System.Windows.Forms.MessageBox]::Show(
+        'This computer needs to restart. It will restart in $DelayMinutes minute(s).`n`nDo you want to proceed with the restart?',
+        'System Restart Pending',
+        [System.Windows.Forms.MessageBoxButtons]::YesNo,
+        [System.Windows.Forms.MessageBoxIcon]::Warning
+    )
+    if (`$result -eq [System.Windows.Forms.DialogResult]::Yes) {
+        'YES' | Out-File -FilePath '$responseFile' -Encoding ASCII
+    } else {
+        'NO' | Out-File -FilePath '$responseFile' -Encoding ASCII
+    }
+} catch {
+    'ERROR' | Out-File -FilePath '$responseFile' -Encoding ASCII
+}
+"@
+
+        Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+            param($PopupScript, $ScriptPath, $TaskName)
+            Set-Content -Path $ScriptPath -Value $PopupScript -Encoding ASCII -Force
+
+            $taskCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Normal -File `"$ScriptPath`""
+            schtasks.exe /Create /F /TN $TaskName /TR $taskCommand /SC ONCE /ST 00:00 /RL HIGHEST /RU SYSTEM /IT | Out-Null
+            schtasks.exe /Run /TN $TaskName | Out-Null
+        } -ArgumentList $popupScript, $scriptPath, $taskName -ErrorAction Stop
+
+        $userResponse = $null
+        $deadline = [DateTime]::UtcNow.AddMinutes(15)
+        while (([DateTime]::UtcNow) -lt $deadline) {
+            $userResponse = Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+                param($ResponseFile)
+                if (Test-Path $ResponseFile) {
+                    Get-Content -Path $ResponseFile -ErrorAction Stop | Select-Object -First 1
                 }
-            } catch {
-                return "ERROR"
-            }
-        } -ArgumentList $DelayMinutes -ErrorAction SilentlyContinue
-        
-        if ($userResponse -eq "NO") {
-            Write-Output "CANCELED:$ComputerName : $id"
+            } -ArgumentList $responseFile -ErrorAction SilentlyContinue
+
+            if ($userResponse) { break }
+            Start-Sleep -Seconds 2
+        }
+
+        Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+            param($TaskName, $ScriptPath, $ResponseFile)
+            schtasks.exe /Delete /TN $TaskName /F | Out-Null
+            Remove-Item -Path $ScriptPath,$ResponseFile -ErrorAction SilentlyContinue
+        } -ArgumentList $taskName, $scriptPath, $responseFile -ErrorAction SilentlyContinue
+
+        if ($userResponse -eq 'NO') {
+            Write-Output "CANCELED:$ComputerName:$id"
             return
         }
-        
-        if ($userResponse -ne "YES") {
-            Write-Output "FAILED:$ComputerName : $id:Unable to display prompt on remote machine"
+
+        if ($userResponse -ne 'YES') {
+            Write-Output "FAILED:$ComputerName:$id:Unable to display prompt on remote machine"
             return
         }
-        
-        # User selected Yes, wait for delay then restart
+
         Start-Sleep -Seconds ($DelayMinutes * 60)
-        
+
         try {
             Restart-Computer -ComputerName $ComputerName -Force -ErrorAction Stop
-            Write-Output "RESTARTED:$ComputerName : $id"
+            Write-Output "RESTARTED:$ComputerName:$id"
         } catch {
-            Write-Output "FAILED:$ComputerName : $id : $($_.Exception.Message)"
+            Write-Output "FAILED:$ComputerName:$id:$($_.Exception.Message)"
         }
     } -ArgumentList $ComputerName, $DelayMinutes, $id
 
