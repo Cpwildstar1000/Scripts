@@ -118,7 +118,7 @@ if ($Confirmation -eq "Y") {
         "Starting Profile Deletion on $Computer..." | Tee-Object $LogFile -Append | Write-Host
         foreach ($UserProfile in $Profiles) {
             Write-Host -ForegroundColor Yellow "Deleting Profile:" $UserProfile.LocalPath 
-            $UserProfile.LocalPath.Split('\')[-1] | Invoke-Command -ComputerName $DNSName -ScriptBlock {Remove-CimInstance -Comfirm:$false}
+            $UserProfile | Invoke-Command -ComputerName $DNSName -ScriptBlock {Remove-CimInstance}
             $ProfilesDeleted++
 
             # Add to computer PSCustomObject profiles deleted 
