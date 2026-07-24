@@ -113,11 +113,23 @@ if ($Confirmation -eq "Y") {
         $DNSName = (Resolve-DnsName $Computer).Name
         
         "Writing Profiles on $Computer to log..." | Tee-Object $LogFile -Append | Write-Host
-        Invoke-Command -ComputerName $DNSName -ScriptBlock {Get-CimInstance -Class Win32_UserProfile | Where-Object {($_.Special -eq $false) -and ($_.LocalPath.Split('\') -notin $AccountsToKeep) -and ($_.Loaded -eq $false)}} | Tee-Object $LogFile -Append
+        $Profiles =Invoke-Command -ComputerName $DNSName -ScriptBlock {Get-CimInstance -Class Win32_UserProfile | Where-Object {($_.Special -eq $false) -and ($_.LocalPath.Split('\') -notin $AccountsToKeep) -and ($_.Loaded -eq $false)}} | Tee-Object $LogFile -Append
 
         "Starting Profile Deletion on $Computer..." | Tee-Object $LogFile -Append | Write-Host
-        Invoke-Command -ComputerName $DNSName -ScriptBlock {Get-CimInstance -Class Win32_UserProfile | Where-Object {($_.Special -eq $false) -and ($_.LocalPath.Split('\') -notin $AccountsToKeep) -and ($_.Loaded -eq $false)} | ForEach-Object {
-            Write-Host -ForegroundColor Yellow "Deleting Profile:" $_.LocalPath | Tee-Object $LogFile -Append 
+        foreach ($UserProfile in $Profiles) {
+            Write-Host -ForegroundColor Yellow "Deleting Profile:" $UserProfile.LocalPath 
+            Remove-CimInstance $UserProfile -Confirm:$false -WhatIf
+            $ProfilesDeleted++
+
+            # Add to computer PSCustomObject profiles deleted 
+            foreach ($row in $RowToAdd) {
+                if ($row.ComputerName -eq $Computer) {
+                    $row.DeletedProfiles++
+                }
+            }
+        }
+        <#Invoke-Command -ComputerName $DNSName -ScriptBlock {Get-CimInstance -Class Win32_UserProfile | Where-Object {($_.Special -eq $false) -and ($_.LocalPath.Split('\') -notin $AccountsToKeep) -and ($_.Loaded -eq $false)} | ForEach-Object {
+            Write-Host -ForegroundColor Yellow "Deleting Profile:" $_.LocalPath 
             Remove-CimInstance $_ -Confirm:$false -WhatIf
             $ProfilesDeleted++
 
@@ -127,7 +139,7 @@ if ($Confirmation -eq "Y") {
                     $row.DeletedProfiles++
                 }
             }
-        }}
+        }}#>
         
         $currentCount++
     }
