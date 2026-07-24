@@ -145,5 +145,6 @@ if ($Confirmation -eq "Y") {
     }
     "Completed Computer Profile Deletion script for $TotalComputers computers." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
     "Profiles Deleted: $ProfilesDeleted" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkCyan
-    "Count of profiles deleted per computer: $ComputerProfileCount" | Tee-Object $LogFile -Append | Write-Host
+    Write-Host "Count of profiles deleted per computer:"
+    $ComputerProfileCount | Format-Table
 }
