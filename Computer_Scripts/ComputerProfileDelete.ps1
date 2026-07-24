@@ -69,7 +69,6 @@ if (Test-Path $LogFile) {"`r`n`r`n$Date`r`n" | Tee-Object $LogFile -Append}
 
 # Create tracking Variables
 
-$AccountsToKeep = @('Administrator','Public','Default','DefaultAccount','defaultuser0','WDAGUtilityAccount')
 $ProfilesDeleted = 0
 $ComputerProfileCount = @()
 
@@ -113,7 +112,10 @@ if ($Confirmation -eq "Y") {
         $DNSName = (Resolve-DnsName $Computer).Name
         
         "Writing Profiles on $Computer to log..." | Tee-Object $LogFile -Append | Write-Host
-        $Profiles =Invoke-Command -ComputerName $DNSName -ScriptBlock {Get-CimInstance -Class Win32_UserProfile | Where-Object {($_.Special -eq $false) -and ($_.LocalPath.Split('\') -notin $AccountsToKeep) -and ($_.Loaded -eq $false)}} | Tee-Object $LogFile -Append
+        $Profiles =Invoke-Command -ComputerName $DNSName -ScriptBlock {
+            $AccountsToKeep = @('Administrator','Public','Default','DefaultAccount','defaultuser0','WDAGUtilityAccount')
+            Get-CimInstance -Class Win32_UserProfile | Where-Object {($_.Special -eq $false) -and ($_.LocalPath.Split('\') -notin $AccountsToKeep) -and ($_.Loaded -eq $false)}
+        } | Tee-Object $LogFile -Append
 
         "Starting Profile Deletion on $Computer..." | Tee-Object $LogFile -Append | Write-Host
         foreach ($UserProfile in $Profiles) {
