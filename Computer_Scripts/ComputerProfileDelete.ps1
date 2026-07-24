@@ -118,7 +118,7 @@ if ($Confirmation -eq "Y") {
         "Starting Profile Deletion on $Computer..." | Tee-Object $LogFile -Append | Write-Host
         foreach ($UserProfile in $Profiles) {
             Write-Host -ForegroundColor Yellow "Deleting Profile:" $UserProfile.LocalPath 
-            Remove-CimInstance $UserProfile -Confirm:$false -WhatIf
+            $UserProfile.LocalPath.Split('\')[-1] | Invoke-Command -ComputerName $DNSName -ScriptBlock {Remove-CimInstance -Comfirm:$false}
             $ProfilesDeleted++
 
             # Add to computer PSCustomObject profiles deleted 
@@ -128,18 +128,6 @@ if ($Confirmation -eq "Y") {
                 }
             }
         }
-        <#Invoke-Command -ComputerName $DNSName -ScriptBlock {Get-CimInstance -Class Win32_UserProfile | Where-Object {($_.Special -eq $false) -and ($_.LocalPath.Split('\') -notin $AccountsToKeep) -and ($_.Loaded -eq $false)} | ForEach-Object {
-            Write-Host -ForegroundColor Yellow "Deleting Profile:" $_.LocalPath 
-            Remove-CimInstance $_ -Confirm:$false -WhatIf
-            $ProfilesDeleted++
-
-            # Add to computer PSCustomObject profiles deleted 
-            foreach ($row in $RowToAdd) {
-                if ($row.ComputerName -eq $Computer) {
-                    $row.DeletedProfiles++
-                }
-            }
-        }}#>
         
         $currentCount++
     }
