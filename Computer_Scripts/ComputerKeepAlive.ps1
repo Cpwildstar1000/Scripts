@@ -39,7 +39,7 @@ if ($OneDrivePath -eq "None") {$DesktopPath = "$UserProfile\Desktop"}
 else {$DesktopPath = "$OneDrivePath\Desktop"}
 
 # Create log file
-$LogFileLocation = "$DesktopPath"
+$LogFileLocation = "$DesktopPath\ComputerScripts"
 $LogFileName = "ComputerKeepAliveLog"
 $Date = Get-Date -Format "MMddyy"
 $LogFileFormatType = ".txt"
@@ -56,30 +56,38 @@ $NeedsUpdate = 0
 $NeedsUpdateList = @()
 
 # Confirm ComputerList.txt exists on desktop
-if (!(Test-Path $DesktopPath\ComputerList.txt)) {
-    New-Item -Path $DesktopPath -Name "ComputerList.txt" -ItemType File | Out-Null
-    "Created computer list file: $DesktopPath\ComputerList.txt" | Tee-Object $LogFile -Append | Write-Host
+if (!(Test-Path $DesktopPath\ComputerScripts -PathType Container)) {
+    New-Item -Path $DesktopPath -Name "ComputerScripts" -ItemType Directory | Out-Null
+}
+if (!(Test-Path $DesktopPath\ComputerScripts\ComputerList.txt)) {
+    New-Item -Path $DesktopPath\ComputerScripts -Name "ComputerList.txt" -ItemType File | Out-Null
+    "Created computer list file: $DesktopPath\ComputerScripts\ComputerList.txt" | Tee-Object $LogFile -Append | Write-Host
 }
 
-# Confirm ComputerNoRestartCounter.txt exists
+<# Confirm ComputerNoRestartCounter.txt exists
 if (!(Test-Path $DesktopPath\ComputerNoRestartCounter.txt)) {
     New-Item -Path $DesktopPath -Name "ComputerNoRestartCounter.csv" -ItemType File | Out-Null
     "Created computer no restart list file: $DesktopPath\ComputerNoRestartCounter.csv" | Tee-Object $LogFile -Append | Write-Host
 }
-else {$data = Import-CSV $DesktopPath\ComputerNoRestartCounter.csv}
+else {$data = Import-CSV $DesktopPath\ComputerNoRestartCounter.csv}#>
 
 # Confirm user is ready for script to run
-"Please make sure the computers you want to run the script against are listed in $DesktopPath\ComputerList.txt, with one computer name per line." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
+"Please make sure the computers you want to run the script against are listed in $DesktopPath\ComputerScripts\ComputerList.txt, with one computer name per line." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
 $Confirmation = Read-Host "Ready to run the script? (Y/N)"Pause
 
 # Get computer list
 $ComputerList = @()
-$ComputerList = Get-Content -Path $DesktopPath\ComputerList.txt
+$ComputerList = Get-Content -Path $DesktopPath\ComputerScripts\ComputerList.txt
 
-# Get computer NonRestart list
-$NonRestartList = Import-CSV $DesktopPath\ComputerNoRestartCounter.csv
+<# Get computer NonRestart list
 $NonRestartComputers = @()
-$NonRestartComputers 
+$NonRestartList = @()
+$NonRestartList = Import-CSV $DesktopPath\ComputerNoRestartCounter.csv
+foreach ($Line in $NonRestartList) {
+    $NonRestartComputers += $Line.ComputerName
+    $NonRestartCount += $Line.NonRestartCount
+    $NotOnListCount += $Line.NotOnListCount
+}#>
 
 if ($Confirmation -eq "Y") {
     $TotalComputers = $ComputerList.Count
@@ -119,6 +127,15 @@ if ($Confirmation -eq "Y") {
             if ($LoggedOnUserQuery) {
                 "There is a user logged on to $Computer : $LoggedOnUserQuery" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
                 "Aborting further actions on $Computer to avoid disruption to logged on user(s)." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
+                <#$NRCCount = 0
+                foreach ($NonRestartComputer in $NonRestartComputers) {
+                    if ($Computer -eq $NonRestartComputer) {
+                        $NonRestartCount
+                    }
+                    else {
+                        NRCCount++
+                    }
+                }#>
                 $NeedsUpdateList += $Computer
                 $NeedsUpdate++
                 Start-Sleep -Seconds 3
@@ -145,7 +162,7 @@ if ($Confirmation -eq "Y") {
     "Computers that still need reboot: $NeedsUpdate" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor DarkCyan
     $NeedsUpdateList | Tee-Object $LogFile -Append
 }
-<
+<#
 Add section to remember comptuers and if they are offline for 3 times just reboot computer without waiting for user
 $ResultTable = foreach ($line in $data) {
     $ComputerName = $line.ComputerName

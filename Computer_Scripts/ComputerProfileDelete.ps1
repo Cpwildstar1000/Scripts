@@ -58,7 +58,7 @@ if ($OneDrivePath -eq "None") {$DesktopPath = "$UserProfile\Desktop"}
 else {$DesktopPath = "$OneDrivePath\Desktop"}
 
 # Create log file
-$LogFileLocation = "$DesktopPath"
+$LogFileLocation = "$DesktopPath\ComputerScripts"
 $LogFileName = "ComputerProfileDeleteLog"
 $Date = Get-Date -Format "MMddyy"
 $LogFileFormatType = ".txt"
@@ -73,18 +73,21 @@ $ProfilesDeleted = 0
 $ComputerProfileCount = @()
 
 # Confirm ComputerList.txt exists on desktop
-if (!(Test-Path $DesktopPath\ComputerList.txt)) {
+if (!(Test-Path $DesktopPath\ComputerScripts -PathType Container)) {
+    New-Item -Path $DesktopPath -Name "ComputerScripts" -ItemType Directory | Out-Null
+}
+if (!(Test-Path $DesktopPath\ComputerScripts\ComputerList.txt)) {
     New-Item -Path $DesktopPath -Name "ComputerList.txt" -ItemType File | Out-Null
-    "Created computer list file: $DesktopPath\ComputerList.txt" | Tee-Object $LogFile -Append | Write-Host
+    "Created computer list file: $DesktopPath\ComputerScripts\ComputerList.txt" | Tee-Object $LogFile -Append | Write-Host
 }
 
 # Confirm user is ready for script to run
-"Please make sure the computers you want to run the script against are listed in $DesktopPath\ComputerList.txt, with one computer name per line." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
+"Please make sure the computers you want to run the script against are listed in $DesktopPath\ComputerScripts\ComputerList.txt, with one computer name per line." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
 $Confirmation = Read-Host "Ready to run the script? (Y/N)"Pause
 
 # Get computer list
 $ComputerList = @()
-$ComputerList = Get-Content -Path $DesktopPath\ComputerList.txt
+$ComputerList = Get-Content -Path $DesktopPath\ComputerScripts\ComputerList.txt
 
 if ($Confirmation -eq "Y") {
     $TotalComputers = $ComputerList.Count
