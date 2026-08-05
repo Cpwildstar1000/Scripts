@@ -43,7 +43,7 @@ $LogFileLocation = "$DesktopPath\ComputerScripts"
 $LogFileName = "ComputerKeepAliveLog"
 $Date = Get-Date -Format "MMddyy"
 $LogFileFormatType = ".txt"
-$LogFileFullName = "$LogFileName$LogFileFormatType"
+$LogFileFullName = "$LogFileName$Date$LogFileFormatType"
 $LogFile = Join-Path $LogFileLocation $LogFileFullName
 
 if (Test-Path $LogFile) {"`r`n`r`n$Date`r`n" | Tee-Object $LogFile -Append}
