@@ -58,7 +58,7 @@ if ($OneDrivePath -eq "None") {$DesktopPath = "$UserProfile\Desktop"}
 else {$DesktopPath = "$OneDrivePath\Desktop"}
 
 # Create log file
-$LogFileLocation = "$DesktopPath\ComputerScripts"
+$LogFileLocation = "$DesktopPath\ComputerScripts\Logs"
 $LogFileName = "ComputerProfileDeleteLog"
 $Date = Get-Date -Format "MMddyy"
 $LogFileFormatType = ".txt"
@@ -75,6 +75,9 @@ $ComputerProfileCount = @()
 # Confirm ComputerList.txt exists on desktop
 if (!(Test-Path $DesktopPath\ComputerScripts -PathType Container)) {
     New-Item -Path $DesktopPath -Name "ComputerScripts" -ItemType Directory | Out-Null
+}
+if (!(Test-Path $DesktopPath\ComputerScripts\Logs)) {
+    New-Item -Path $DesktopPath\ComputerScripts -Name "Logs" -ItemType Directory | Out-Null
 }
 if (!(Test-Path $DesktopPath\ComputerScripts\ComputerList.txt)) {
     New-Item -Path $DesktopPath -Name "ComputerList.txt" -ItemType File | Out-Null
