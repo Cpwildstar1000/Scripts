@@ -28,10 +28,6 @@ $PastDaysToCheck = @(
     "2026-09-30"
 )
 
-$RoomArray = @()
-$RoomAMCount = 0
-$RoomPMCount = 0
-
 if (Test-Path $LogFile) {"`r`n`r`n$Date`r`n" | Tee-Object $LogFile -Append}
 
 # Confirm ComputerList.txt exists on desktop
@@ -133,7 +129,8 @@ if ($Confirmation -eq "Y" -or "yes") {
                             Period = $Period
                             Username = $LoggedOnUser.Antecedent.Name
                             Domain = $LoggedOnUser.Antecedent.Domain
-                            LoggedIn = $true
+                            #LoggedIn = $true
+                            LoggedIn = if ($LoggedOnUser.Antecedent.Name -eq ((Get-WmiObject -Class Win32_ComputerSystem | Select-Object -ExpandProperty UserName).Split('\')[1])) {$true} else {$false}
                             LogonID = $LogonSession.LogonId
                             AuthenticationType = $LogonSession.AuthenticationPackage
                             StartTime = $LogonSession.StartTime
@@ -179,7 +176,7 @@ if ($AllLoginResults) {
         }
     }
     $RoomCounts | Sort-Object Room | Format-Table -AutoSize
-    
+
     $AllLoginResults | Format-Table -AutoSize
 
     if ($LoginDateMode.ToLower() -eq "past") {
