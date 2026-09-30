@@ -25,10 +25,12 @@ $IgnoredUsernames = @(
 
 $LoginDateMode = "Past"
 $PastDaysToCheck = @(
-    "2026-09-15"
+    "2026-09-30"
 )
 
 $RoomArray = @()
+$RoomAMCount = 0
+$RoomPMCount = 0
 
 if (Test-Path $LogFile) {"`r`n`r`n$Date`r`n" | Tee-Object $LogFile -Append}
 
@@ -150,7 +152,6 @@ if ($Confirmation -eq "Y" -or "yes") {
                         continue
                     }
 
-
                     $RoomArray += $LoginResult.Room
 
                     $AllLoginResults += $LoginResult
@@ -178,7 +179,7 @@ if ($AllLoginResults) {
         }
     }
     $RoomCounts | Sort-Object Room | Format-Table -AutoSize
-
+    
     $AllLoginResults | Format-Table -AutoSize
 
     if ($LoginDateMode.ToLower() -eq "past") {
@@ -199,9 +200,4 @@ if ($AllLoginResults) {
         "`nAM/PM login comparison:" | Write-Host
         $LoginDifferences | Format-Table -AutoSize
     }
-}
-
-if ($RoomArray) {
-    $RoomCounts = $RoomArray | Group-Object | Select-Object Name, Count
-    $RoomCounts
 }
