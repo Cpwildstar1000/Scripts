@@ -166,6 +166,19 @@ if ($Confirmation -eq "Y" -or "yes") {
 Write-Host $UserCount
 
 if ($AllLoginResults) {
+    $RoomCounts = foreach ($RoomGroup in ($AllLoginResults | Group-Object -Property Room)) {
+        $AMCount = @($RoomGroup.Group | Where-Object { $_.Period -eq "AM" }).Count
+        $PMCount = @($RoomGroup.Group | Where-Object { $_.Period -eq "PM" }).Count
+
+        [PSCustomObject]@{
+            Room        = $RoomGroup.Name
+            AMLogins    = $AMCount
+            PMLogins    = $PMCount
+            TotalLogins = $AMCount + $PMCount
+        }
+    }
+    $RoomCounts | Sort-Object Room | Format-Table -AutoSize
+
     $AllLoginResults | Format-Table -AutoSize
 
     if ($LoginDateMode.ToLower() -eq "past") {
