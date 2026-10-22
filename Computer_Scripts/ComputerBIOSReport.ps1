@@ -64,13 +64,16 @@ if (!(Test-Path $DesktopPath\ComputerScripts\ComputerList.txt)) {
 "Please make sure the computers you want to run the script against are listed in $DesktopPath\ComputerScripts\ComputerList.txt, with one computer name per line." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Yellow
 $Confirmation = Read-Host "Ready to run the script? (Y/N)"Pause
 
+# Variable Setup
+$BIOSResults = [System.Collections.Generic.List[PSCustomObject]]::new()
+
 # Get computer list
 $ComputerList = @()
 $ComputerList = Get-Content -Path $DesktopPath\ComputerScripts\ComputerList.txt
 
 if ($Confirmation -eq "Y") {
     $TotalComputers = $ComputerList.Count
-    $currentCount = 0
+    $currentCount = 1
     "Starting Computer Keep Alive script..." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
     foreach ($Computer in $ComputerList) {
         Clear-Host
@@ -79,35 +82,27 @@ if ($Confirmation -eq "Y") {
 
         $DNSName = (Resolve-DnsName $Computer).Name
         if (!($DNSName)) {
-            "Failed to resolve DNS name for $Computer." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
+            "`nFailed to resolve DNS name for $Computer." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
             continue
         }
         else {
-            "Resolved DNS name for $Computer : $DNSName" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
+            "`nResolved DNS name for $Computer : $DNSName" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
         }   
-        try {
-            $BIOSResults = Invoke-Command -ComputerName $DNSName -ScriptBlock {
-                $BIOSVer = (Get-CimInstance Win32_BIOS).SMBIOSBIOSVersion
-                [PSCustomObject]@{
-                    Computer = $Computer
-                    BIOS = $BIOSVer
-                }
-            }
-
-            foreach ($BIOSResult in $BIOSResults) {
-                $BIOSVerResults += $BIOSResult
-            }
+        $BIOSResults += Invoke-Command -ComputerName $DNSName -ErrorAction SilentlyContinue -ScriptBlock {
+            $BIOSRes.Add([PSCustomObject]@{
+                BIOS     = $BIOSVersion
+            })
         }
-        catch {Write-Warning "Unable to get BIOS"}
-    $currentCount++
+
+        $currentCount++
     }
 }
 
-if ($BIOSVerResults) {
-    $Report = foreach ($Result in ($BIOSVerResults | Group-Object Computer, BIOS)) {
+if ($BIOSResults) {
+    $Report = foreach ($Result in $BIOSResults) {
         [PSCustomObject]@{
-            Computer = $Result.Group[0].Computer
-            BIOS = $Result.Group[0].BIOS
+            Computer = $Result.PSComputerName
+            BIOS = $Result.BIOS
         }
     }
     $Report | Format-Table -AutoSize
