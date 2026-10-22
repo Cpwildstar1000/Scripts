@@ -40,7 +40,7 @@ else {$DesktopPath = "$OneDrivePath\Desktop"}
 
 # Create log file
 $LogFileLocation = "$DesktopPath\ComputerScripts\Logs"
-$LogFileName = "ComputerBIOSReportLog"
+$LogFileName = "ComputerKeepAliveLog"
 $Date = Get-Date -Format "MMddyy"
 $LogFileFormatType = ".txt"
 $LogFileFullName = "$LogFileName$Date$LogFileFormatType"
@@ -71,36 +71,28 @@ $ComputerList = Get-Content -Path $DesktopPath\ComputerScripts\ComputerList.txt
 if ($Confirmation -eq "Y") {
     $TotalComputers = $ComputerList.Count
     $currentCount = 0
-    "Starting Computer BIOS report..." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
-    $Report = @(
-        foreach ($Computer in $ComputerList) {
-            Clear-Host
-            $Percent = [math]::Round(($currentCount / $TotalComputers) * 100)
-            Show-ProgressBar -Percent $Percent -Activity "Running Through Computers"
+    "Starting Computer Keep Alive script..." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
+    foreach ($Computer in $ComputerList) {
+        Clear-Host
+        $Percent = [math]::Round(($currentCount / $TotalComputers) * 100)
+        Show-ProgressBar -Percent $Percent -Activity "Running Through Computers"
 
-            $DNSName = Resolve-DnsName $Computer -ErrorAction SilentlyContinue |
-                Select-Object -First 1 -ExpandProperty Name
-            if (!($DNSName)) {
-                "`nFailed to resolve DNS name for $Computer." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
-                $currentCount++
-                continue
-            }
-            else {
-                "`nResolved DNS name for $Computer : $DNSName" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
-                $BIOS = Get-CimInstance -ClassName Win32_BIOS -ComputerName $DNSName -ErrorAction Stop |
-                    Select-Object -First 1
-                $BIOSVer = $BIOS.SMBIOSBIOSVersion
-                if ([string]::IsNullOrWhiteSpace($BIOSVer)) {
-                    $BIOSVer = $BIOS.BIOSVersion -join ", "
+        $DNSName = (Resolve-DnsName $Computer).Name
+        if (!($DNSName)) {
+            "Failed to resolve DNS name for $Computer." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
+            continue
+        }
+        else {
+            "Resolved DNS name for $Computer : $DNSName" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
+        }   
+        try {
+            $BIOSResults = Invoke-Command -ComputerName $DNSName -ScriptBlock {
+                $BIOSVer = (Get-CimInstance Win32_BIOS).SMBIOSBIOSVersion
+                [PSCustomObject]@{
+                    Computer = $Computer
+                    BIOS = $BIOSVer
                 }
             }
-
-            $currentCount++
-            [PSCustomObject]@{
-                Computer = $Computer
-                BIOS     = $BIOSVer
-            }
         }
-    )
+    }
 }
-$Report
