@@ -28,10 +28,6 @@ $PastDaysToCheck = @(
     "2026-09-30"
 )
 
-$RoomArray = @()
-$RoomAMCount = 0
-$RoomPMCount = 0
-
 if (Test-Path $LogFile) {"`r`n`r`n$Date`r`n" | Tee-Object $LogFile -Append}
 
 # Confirm ComputerList.txt exists on desktop
@@ -151,8 +147,6 @@ if ($Confirmation -eq "Y" -or "yes") {
                     if ($IgnoredUsernames -contains $LoginResult.Username) {
                         continue
                     }
-
-                    $RoomArray += $LoginResult.Room
 
                     $AllLoginResults += $LoginResult
                     $UserCount++
