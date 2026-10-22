@@ -86,9 +86,11 @@ if ($Confirmation -eq "Y") {
             "Resolved DNS name for $Computer : $DNSName" | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Green
             $BIOSVer = (Get-CimInstance Win32_BIOS -ComputerName $DNSName).SMBIOSBIOSVersion
         }   
+    $Report = [PSCustomObject]@{
+    Computer = $Computer
+    BIOS = $BIOSVer
     }
-    [PSCustomObject]@{
-        Computer = $Computer
-        BIOS = $BIOSVer
+    $currentCount++
     }
 }
+$Report
