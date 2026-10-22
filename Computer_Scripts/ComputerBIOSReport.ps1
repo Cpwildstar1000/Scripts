@@ -93,6 +93,22 @@ if ($Confirmation -eq "Y") {
                     BIOS = $BIOSVer
                 }
             }
+
+            foreach ($BIOSResult in $BIOSResults) {
+                $BIOSVerResults += $BIOSResult
+            }
+        }
+        catch {Write-Warning "Unable to get BIOS"}
+    $currentCount++
+    }
+}
+
+if ($BIOSVerResults) {
+    $Report = foreach ($Result in ($BIOSVerResults | Group-Object Computer, BIOS)) {
+        [PSCustomObject]@{
+            Computer = $Result.Group[0].Computer
+            BIOS = $Result.Group[0].BIOS
         }
     }
+    $Report | Format-Table -AutoSize
 }
