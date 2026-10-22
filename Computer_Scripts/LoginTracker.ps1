@@ -11,7 +11,7 @@ else {$DesktopPath = "$OneDrivePath\Desktop"}
 
 # Create log file
 $LogFileLocation = "$DesktopPath\ComputerScripts\Logs"
-$LogFileName = "ComputerKeepAliveLog"
+$LogFileName = "ComputerLoginTrackerLog"
 $Date = Get-Date -Format "MMddyy"
 $LogFileFormatType = ".txt"
 $LogFileFullName = "$LogFileName$Date$LogFileFormatType"
