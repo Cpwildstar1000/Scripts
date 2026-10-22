@@ -79,7 +79,7 @@ if ($Confirmation -eq "Y") {
 
         $DNSName = (Resolve-DnsName $Computer).Name
         if (!($DNSName)) {
-            "Failed to resolve DNS name for $Computer. Skipping GPUpdate." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
+            "Failed to resolve DNS name for $Computer." | Tee-Object $LogFile -Append | Write-Host -ForegroundColor Red
             continue
         }
         else {
